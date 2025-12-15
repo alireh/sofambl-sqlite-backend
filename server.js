@@ -14,6 +14,10 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
+
+
+app.use(express.urlencoded({ extended: true }));
+
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
 // multer
