@@ -17,7 +17,7 @@ app.use('/uploads', express.static('uploads'));
 
 
 // مقداردهی اولیه دیتابیس
-initDatabase();
+// initDatabase();
 
 // بقیه کدهای سرور...
 
@@ -467,7 +467,44 @@ app.delete('/api/admin/products/:id', adminAuth, (req, res) => {
 });
 
 /* ---------- SOCIAL LINKS ---------- */
-// GET social links (public)
+// // GET social links (public)
+// app.get('/api/social-links', (_, res) => {
+//   const links = db.prepare(`
+//     SELECT * FROM social_links 
+//     WHERE is_active=1 
+//     ORDER BY display_order
+//   `).all();
+//   res.json(links);
+// });
+
+// // GET all social links (admin)
+// app.get('/api/admin/social-links', adminAuth, (_, res) => {
+//   const links = db.prepare(`
+//     SELECT * FROM social_links 
+//     ORDER BY display_order
+//   `).all();
+//   res.json(links);
+// });
+
+// // UPDATE social link (admin)
+// app.put('/api/admin/social-links/:id', adminAuth, (req, res) => {
+//   const { url, is_active, display_order } = req.body;
+
+//   db.prepare(`
+//     UPDATE social_links 
+//     SET url = COALESCE(?, url),
+//         is_active = COALESCE(?, is_active),
+//         display_order = COALESCE(?, display_order)
+//     WHERE id=?
+//   `).run(url, is_active, display_order, req.params.id);
+
+//   const updated = db.prepare(`SELECT * FROM social_links WHERE id=?`).get(req.params.id);
+//   res.json(updated);
+// });
+
+/* ---------- SOCIAL LINKS ---------- */
+
+// GET all social links (public)
 app.get('/api/social-links', (_, res) => {
   const links = db.prepare(`
     SELECT * FROM social_links 
@@ -477,7 +514,7 @@ app.get('/api/social-links', (_, res) => {
   res.json(links);
 });
 
-// GET all social links (admin)
+// GET all social links (admin - با همه اطلاعات)
 app.get('/api/admin/social-links', adminAuth, (_, res) => {
   const links = db.prepare(`
     SELECT * FROM social_links 
@@ -486,20 +523,126 @@ app.get('/api/admin/social-links', adminAuth, (_, res) => {
   res.json(links);
 });
 
+// CREATE new social link (admin)
+app.post('/api/admin/social-links', adminAuth, (req, res) => {
+  const { platform, url, icon, display_order } = req.body;
+
+  if (!platform || !url) {
+    return res.status(400).json({ error: 'Platform and URL are required' });
+  }
+
+  // بررسی اینکه آیا پلتفرم از قبل وجود دارد
+  const existing = db.prepare(`
+    SELECT id FROM social_links WHERE platform=?
+  `).get(platform);
+
+  if (existing) {
+    return res.status(400).json({ error: 'Platform already exists' });
+  }
+
+  const result = db.prepare(`
+    INSERT INTO social_links (platform, url, icon, display_order, is_active)
+    VALUES (?, ?, ?, ?, 1)
+  `).run(platform, url, icon || platform, display_order || 99);
+
+  const newLink = db.prepare(`
+    SELECT * FROM social_links WHERE id=?
+  `).get(result.lastInsertRowid);
+
+  res.status(201).json(newLink);
+});
+
 // UPDATE social link (admin)
 app.put('/api/admin/social-links/:id', adminAuth, (req, res) => {
-  const { url, is_active, display_order } = req.body;
+  const { url, icon, is_active, display_order } = req.body;
+
+  const existing = db.prepare(`
+    SELECT * FROM social_links WHERE id=?
+  `).get(req.params.id);
+
+  if (!existing) {
+    return res.status(404).json({ error: 'Social link not found' });
+  }
 
   db.prepare(`
     UPDATE social_links 
     SET url = COALESCE(?, url),
+        icon = COALESCE(?, icon),
         is_active = COALESCE(?, is_active),
         display_order = COALESCE(?, display_order)
     WHERE id=?
-  `).run(url, is_active, display_order, req.params.id);
+  `).run(url, icon, is_active, display_order, req.params.id);
 
   const updated = db.prepare(`SELECT * FROM social_links WHERE id=?`).get(req.params.id);
   res.json(updated);
+});
+
+// DELETE social link (admin)
+app.delete('/api/admin/social-links/:id', adminAuth, (req, res) => {
+  const { id } = req.params;
+
+  const existing = db.prepare(`
+    SELECT * FROM social_links WHERE id=?
+  `).get(id);
+
+  if (!existing) {
+    return res.status(404).json({ error: 'Social link not found' });
+  }
+
+  // بررسی اینکه آیا می‌توان حذف کرد (اگر از پلتفرم‌های پیش‌فرض باشد، می‌توان غیرفعال کرد ولی حذف نکرد)
+  const isDefault = ['telegram', 'instagram', 'pinterest', 'aparat', 'youtube', 'whatsapp']
+    .includes(existing.platform);
+
+  if (isDefault) {
+    // برای پلتفرم‌های پیش‌فرض، فقط غیرفعال می‌کنیم
+    db.prepare(`
+      UPDATE social_links 
+      SET is_active = 0 
+      WHERE id=?
+    `).run(id);
+
+    res.json({
+      success: true,
+      message: 'Default social link deactivated (not deleted)',
+      deactivated: true
+    });
+  } else {
+    // برای پلتفرم‌های دلخواه، حذف می‌کنیم
+    db.prepare(`DELETE FROM social_links WHERE id=?`).run(id);
+    res.json({
+      success: true,
+      message: 'Social link deleted successfully',
+      deleted: true
+    });
+  }
+});
+
+// BULK UPDATE social links order (admin)
+app.put('/api/admin/social-links/order', adminAuth, (req, res) => {
+  const { order } = req.body; // آرایه‌ای از {id, display_order}
+
+  if (!Array.isArray(order)) {
+    return res.status(400).json({ error: 'Order array is required' });
+  }
+
+  const updateStmt = db.prepare(`
+    UPDATE social_links 
+    SET display_order = ? 
+    WHERE id = ?
+  `);
+
+  const transaction = db.transaction((items) => {
+    for (const item of items) {
+      updateStmt.run(item.display_order, item.id);
+    }
+  });
+
+  try {
+    transaction(order);
+    res.json({ success: true, message: 'Order updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update order' });
+  }
 });
 
 /* ---------- SITE SETTINGS ---------- */
