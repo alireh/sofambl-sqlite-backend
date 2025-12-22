@@ -52,19 +52,19 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 /* ---------- PUBLIC ---------- */
-app.get('/api/data', (_, res) => {
-  const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
-  const images = db.prepare(`SELECT * FROM images`).all();
-  res.json({ ...site, images });
-});
+// app.get('/api/data', (_, res) => {
+//   const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
+//   const images = db.prepare(`SELECT * FROM images`).all();
+//   res.json({ ...site, images });
+// });
 
 /* ---------- ADMIN ---------- */
-app.get('/api/admin/data', adminAuth, (_, res) => {
-  const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
-  const images = db.prepare(`SELECT * FROM images`).all();
-  const articles = db.prepare(`SELECT * FROM articles ORDER BY created_at DESC`).all();
-  res.json({ ...site, images, articles });
-});
+// app.get('/api/admin/data', adminAuth, (_, res) => {
+//   const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
+//   const images = db.prepare(`SELECT * FROM images`).all();
+//   const articles = db.prepare(`SELECT * FROM articles ORDER BY created_at DESC`).all();
+//   res.json({ ...site, images, articles });
+// });
 
 app.put('/api/admin/update-content', adminAuth, (req, res) => {
   const { about, address, email, phone } = req.body;
@@ -264,6 +264,21 @@ app.get('/api/categories/:id/products', (req, res) => {
   `).all(req.params.id);
 
   res.json({ ...category, products });
+});
+
+// GET all categories (admin - با اطلاعات کامل)
+app.get('/api/admin/categories', adminAuth, (_, res) => {
+  const categories = db.prepare(`
+    SELECT c.*, 
+           COUNT(p.id) as product_count,
+           SUM(CASE WHEN p.is_active = 1 THEN 1 ELSE 0 END) as active_products
+    FROM categories c
+    LEFT JOIN products p ON c.id = p.category_id
+    GROUP BY c.id
+    ORDER BY c.created_at DESC
+  `).all();
+
+  res.json(categories);
 });
 
 // CREATE category (admin)
@@ -652,13 +667,17 @@ app.get('/api/site-settings', (_, res) => {
   const carouselImages = db.prepare(`
     SELECT * FROM images WHERE type='carousel' ORDER BY id DESC LIMIT ?
   `).all(settings.max_carousel_items);
+  const images = db.prepare(`
+    SELECT * FROM images WHERE type!='carousel' ORDER BY id DESC LIMIT ?
+  `).all(settings.max_carousel_items);
 
-  res.json({ ...settings, carouselImages });
+  res.json({ ...settings, carouselImages, images });
 });
 
 // UPDATE site settings (admin)
 app.put('/api/admin/site-settings', adminAuth, (req, res) => {
-  const { show_carousel, max_carousel_items, article_display_mode } = req.body;
+  const { max_carousel_items, article_display_mode } = req.body;
+  const show_carousel = req.body.show_carousel ? 1 : 0;
 
   db.prepare(`
     UPDATE site_settings 
@@ -739,16 +758,21 @@ app.get('/api/data', (_, res) => {
 
 app.get('/api/admin/data', adminAuth, (_, res) => {
   const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
-  const images = db.prepare(`SELECT * FROM images`).all();
+  const images = db.prepare(`SELECT * FROM images WHERE type!='carousel'`).all();
+  const carouselImages = db.prepare(`SELECT * FROM images WHERE type='carousel'`).all();
   const articles = db.prepare(`SELECT * FROM articles ORDER BY created_at DESC`).all();
   const categories = db.prepare(`SELECT * FROM categories ORDER BY created_at DESC`).all();
   const products = db.prepare(`SELECT * FROM products ORDER BY created_at DESC`).all();
   const socialLinks = db.prepare(`SELECT * FROM social_links ORDER BY display_order`).all();
   const settings = db.prepare(`SELECT * FROM site_settings WHERE id=1`).get();
 
+
+  console.log(`${JSON.stringify(carouselImages)}`)
+
   res.json({
     ...site,
     images,
+    carouselImages,
     articles,
     categories,
     products,
