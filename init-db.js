@@ -21,6 +21,9 @@ export function initDatabase() {
       url TEXT NOT NULL,
       title TEXT,
       type TEXT DEFAULT 'gallery',
+      price INTEGER NOT NULL,
+      off INTEGER NULL,
+      is_tooman BOOLEAN DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -115,26 +118,6 @@ export function initDatabase() {
         VALUES (1, 1, 5, 'card')
       `).run();
   }
-
-  // مقداردهی اولیه جدول social_links
-  const socialPlatforms = [
-    { platform: 'telegram', url: '#', icon: 'telegram', display_order: 1 },
-    { platform: 'instagram', url: '#', icon: 'instagram', display_order: 2 },
-    { platform: 'pinterest', url: '#', icon: 'pinterest', display_order: 3 },
-    { platform: 'aparat', url: '#', icon: 'aparat', display_order: 4 },
-    { platform: 'youtube', url: '#', icon: 'youtube', display_order: 5 },
-    { platform: 'whatsapp', url: '#', icon: 'whatsapp', display_order: 6 }
-  ];
-
-  socialPlatforms.forEach(platform => {
-    const exists = db.prepare(`SELECT id FROM social_links WHERE platform=?`).get(platform.platform);
-    if (!exists) {
-      db.prepare(`
-            INSERT INTO social_links (platform, url, icon, display_order)
-            VALUES (?, ?, ?, ?)
-          `).run(platform.platform, platform.url, platform.icon, platform.display_order);
-    }
-  });
 
   // ایجاد کاربر ادمین پیش‌فرض (رمز عبور: admin123)
   const adminExists = db.prepare(`SELECT id FROM admins WHERE email=?`).get('admin@example.com');

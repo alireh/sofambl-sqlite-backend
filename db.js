@@ -26,7 +26,10 @@ db.prepare(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     url TEXT,
     title TEXT,
-    type TEXT
+    type TEXT,
+    price INTEGER NOT NULL,
+    off INTEGER NOT NULL,
+    is_tooman BOOLEAN DEFAULT 1
   )
 `).run();
 
@@ -91,24 +94,14 @@ db.prepare(`
 `).run();
 
 // seed social links
-// const socialPlatforms = [
-//   { platform: 'telegram', url: '#', icon: 'telegram-icon.png' },
-//   { platform: 'instagram', url: '#', icon: 'instagram-icon.png' },
-//   { platform: 'pinterest', url: '#', icon: 'pinterest-icon.png' },
-//   { platform: 'aparat', url: '#', icon: 'aparat-icon.png' },
-//   { platform: 'youtube', url: '#', icon: 'youtube-icon.png' },
-//   { platform: 'whatsapp', url: '#', icon: 'whatsapp-icon.png' }
-// ];
-
-// socialPlatforms.forEach(platform => {
-//   const exists = db.prepare(`SELECT id FROM social_links WHERE platform=?`).get(platform.platform);
-//   if (!exists) {
-//     db.prepare(`
-//       INSERT INTO social_links (platform, url, icon)
-//       VALUES (?, ?, ?)
-//     `).run(platform.platform, platform.url, platform.icon);
-//   }
-// });
+const socialPlatforms = [
+  { platform: 'telegram', url: '#', icon: '/uploads/socials/telegram.png', display_order: 1 },
+  { platform: 'instagram', url: '#', icon: '/uploads/socials/instagram.png', display_order: 2 },
+  { platform: 'pinterest', url: '#', icon: '/uploads/socials/pinterest.png', display_order: 3 },
+  { platform: 'aparat', url: '#', icon: '/uploads/socials/aparat.png', display_order: 4 },
+  { platform: 'youtube', url: '#', icon: '/uploads/socials/youtube.png', display_order: 5 },
+  { platform: 'whatsapp', url: '#', icon: '/uploads/socials/whatsapp.png', display_order: 6 }
+];
 
 // seed site settings
 const settingsExist = db.prepare(`SELECT id FROM site_settings WHERE id=1`).get();
@@ -118,44 +111,6 @@ if (!settingsExist) {
     VALUES (1, 1, 5, 'card')
   `).run();
 }
-const socialPlatforms = [
-  {
-    platform: 'telegram',
-    url: '#',
-    icon: 'telegram',
-    display_order: 1
-  },
-  {
-    platform: 'instagram',
-    url: '#',
-    icon: 'instagram',
-    display_order: 2
-  },
-  {
-    platform: 'pinterest',
-    url: '#',
-    icon: 'pinterest',
-    display_order: 3
-  },
-  {
-    platform: 'aparat',
-    url: '#',
-    icon: 'aparat',
-    display_order: 4
-  },
-  {
-    platform: 'youtube',
-    url: '#',
-    icon: 'youtube',
-    display_order: 5
-  },
-  {
-    platform: 'whatsapp',
-    url: '#',
-    icon: 'whatsapp',
-    display_order: 6
-  }
-];
 
 socialPlatforms.forEach(platform => {
   const exists = db.prepare(`SELECT id FROM social_links WHERE platform=?`).get(platform.platform);

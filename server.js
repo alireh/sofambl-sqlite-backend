@@ -16,6 +16,71 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 
+// 1. ابتدا این خطا را بالای فایل اضافه کنید
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// 2. پیکربندی دقیق multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    console.log('Upload request path:', req.path); // برای دیباگ
+    console.log('File fieldname:', file.fieldname); // برای دیباگ
+
+    let uploadPath = 'uploads/';
+
+    // تشخیص نوع آپلود بر اساس مسیر
+    if (req.path.includes('socials')) {
+      uploadPath = 'uploads/socials/';
+    } else if (req.path.includes('carousel')) {
+      uploadPath = 'uploads/carousel/';
+    } else if (req.path.includes('articles')) {
+      uploadPath = 'uploads/articles/';
+    } else if (req.path.includes('products')) {
+      uploadPath = 'uploads/products/';
+    } else if (req.path.includes('categories')) {
+      uploadPath = 'uploads/categories/';
+    }
+
+    console.log('Destination path:', uploadPath); // برای دیباگ
+
+    // ایجاد پوشه اگر وجود ندارد
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+      console.log('Created directory:', uploadPath);
+    }
+
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    // نام فایل: timestamp-originalname
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
+    console.log('Generated filename:', uniqueName); // برای دیباگ
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    console.log('File mime type:', file.mimetype); // برای دیباگ
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('فقط فایل‌های تصویری مجاز هستند'));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
+
 // مقداردهی اولیه دیتابیس
 // initDatabase();
 
@@ -24,14 +89,6 @@ app.use('/uploads', express.static('uploads'));
 app.use(express.urlencoded({ extended: true }));
 
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
-
-// multer
-const storage = multer.diskStorage({
-  destination: 'uploads',
-  filename: (_, file, cb) =>
-    cb(null, Date.now() + '-' + file.originalname)
-});
-const upload = multer({ storage });
 
 /* ---------- AUTH ---------- */
 app.post('/api/admin/login', (req, res) => {
@@ -51,21 +108,6 @@ app.post('/api/admin/login', (req, res) => {
   res.json({ token });
 });
 
-/* ---------- PUBLIC ---------- */
-// app.get('/api/data', (_, res) => {
-//   const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
-//   const images = db.prepare(`SELECT * FROM images`).all();
-//   res.json({ ...site, images });
-// });
-
-/* ---------- ADMIN ---------- */
-// app.get('/api/admin/data', adminAuth, (_, res) => {
-//   const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
-//   const images = db.prepare(`SELECT * FROM images`).all();
-//   const articles = db.prepare(`SELECT * FROM articles ORDER BY created_at DESC`).all();
-//   res.json({ ...site, images, articles });
-// });
-
 app.put('/api/admin/update-content', adminAuth, (req, res) => {
   const { about, address, email, phone } = req.body;
 
@@ -83,12 +125,15 @@ app.put('/api/admin/update-content', adminAuth, (req, res) => {
 
 app.post('/api/admin/upload', adminAuth, upload.single('image'), (req, res) => {
   db.prepare(`
-    INSERT INTO images (url, title, type)
-    VALUES (?, ?, ?)
+    INSERT INTO images (url, title, type, price, off, is_tooman)
+    VALUES (?, ?, ?, ?, ?, ?)
   `).run(
     `/uploads/${req.file.filename}`,
     req.body.title || 'تصویر',
-    req.body.type
+    req.body.type,
+    req.body.price,
+    req.body.off,
+    req.body.is_tooman,
   );
 
   res.json({ success: true });
@@ -137,7 +182,7 @@ app.post('/api/admin/articles', adminAuth, upload.single('image'), (req, res) =>
 
   // اگر تصویر آپلود شده باشد
   const imageUrl = req.file
-    ? `/uploads/${req.file.filename}`
+    ? `/uploads/articles/${req.file.filename}`
     : null;
 
   const result = db.prepare(`
@@ -170,7 +215,7 @@ app.put('/api/admin/articles/:id', adminAuth, upload.single('image'), (req, res)
 
   // اگر فایل جدید آپلود شده
   if (req.file) {
-    imageUrl = `/uploads/${req.file.filename}`;
+    imageUrl = `/uploads/articles/${req.file.filename}`;
   }
 
   // اگر کاربر بخواهد تصویر را حذف کند
@@ -210,11 +255,12 @@ app.delete('/api/admin/articles/:id', adminAuth, (req, res) => {
 
   // حذف فایل تصویر از سیستم اگر وجود دارد
   if (existing.image_url) {
-    const imagePath = existing.image_url.replace('/uploads/', 'uploads/');
+    const imagePath = existing.image_url.replace('/uploads/articles/', 'uploads/articles/');
     if (fs.existsSync(imagePath)) {
       fs.unlinkSync(imagePath);
     }
   }
+
 
   db.prepare(`
     DELETE FROM articles WHERE id=?
@@ -289,7 +335,7 @@ app.post('/api/admin/categories', adminAuth, upload.single('image'), (req, res) 
     return res.status(400).json({ error: 'Title is required' });
   }
 
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+  const imageUrl = req.file ? `/uploads/categories/${req.file.filename}` : null;
 
   const result = db.prepare(`
     INSERT INTO categories (title, image_url, description)
@@ -314,7 +360,7 @@ app.put('/api/admin/categories/:id', adminAuth, upload.single('image'), (req, re
 
   let imageUrl = existing.image_url;
   if (req.file) {
-    imageUrl = `/uploads/${req.file.filename}`;
+    imageUrl = `/uploads/categories/${req.file.filename}`;
   }
   if (removeImage === 'true') {
     imageUrl = null;
@@ -348,7 +394,7 @@ app.delete('/api/admin/categories/:id', adminAuth, (req, res) => {
   // حذف تصویر دسته‌بندی
   const category = db.prepare(`SELECT * FROM categories WHERE id=?`).get(req.params.id);
   if (category.image_url) {
-    const imagePath = category.image_url.replace('/uploads/', 'uploads/');
+    const imagePath = category.image_url.replace('/uploads/categories/', 'uploads/categories/');
     if (fs.existsSync(imagePath)) {
       fs.unlinkSync(imagePath);
     }
@@ -367,7 +413,7 @@ app.post('/api/admin/products', adminAuth, upload.single('image'), (req, res) =>
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  const imageUrl = `/uploads/${req.file.filename}`;
+  const imageUrl = `/uploads/products/${req.file.filename}`;
 
   const result = db.prepare(`
     INSERT INTO products (category_id, title, image_url, price, discount_percent, description, features)
@@ -389,7 +435,7 @@ app.put('/api/admin/products/:id', adminAuth, upload.single('image'), (req, res)
 
   let imageUrl = existing.image_url;
   if (req.file) {
-    imageUrl = `/uploads/${req.file.filename}`;
+    imageUrl = `/uploads/products/${req.file.filename}`;
   }
   if (removeImage === 'true') {
     imageUrl = existing.image_url; // حذف تصویر مجاز نیست، فقط می‌توان جایگزین کرد
@@ -410,26 +456,6 @@ app.put('/api/admin/products/:id', adminAuth, upload.single('image'), (req, res)
   const updated = db.prepare(`SELECT * FROM products WHERE id=?`).get(req.params.id);
   res.json(updated);
 });
-
-// DELETE product (admin)
-// app.delete('/api/admin/products/:id', adminAuth, (req, res) => {
-//   const product = db.prepare(`SELECT * FROM products WHERE id=?`).get(req.params.id);
-
-//   if (!product) {
-//     return res.status(404).json({ error: 'Product not found' });
-//   }
-
-//   // حذف تصویر محصول
-//   if (product.image_url) {
-//     const imagePath = product.image_url.replace('/uploads/', 'uploads/');
-//     if (fs.existsSync(imagePath)) {
-//       fs.unlinkSync(imagePath);
-//     }
-//   }
-
-//   db.prepare(`DELETE FROM products WHERE id=?`).run(req.params.id);
-//   res.json({ success: true });
-// });
 
 // GET all products (admin)
 app.get('/api/admin/products', adminAuth, (_, res) => {
@@ -468,7 +494,7 @@ app.delete('/api/admin/products/:id', adminAuth, (req, res) => {
 
   // حذف فایل تصویر از سیستم
   if (existing.image_url) {
-    const imagePath = existing.image_url.replace('/uploads/', 'uploads/');
+    const imagePath = existing.image_url.replace('/uploads/products/', 'uploads/products/');
     if (fs.existsSync(imagePath)) {
       fs.unlinkSync(imagePath);
     }
@@ -482,45 +508,9 @@ app.delete('/api/admin/products/:id', adminAuth, (req, res) => {
 });
 
 /* ---------- SOCIAL LINKS ---------- */
-// // GET social links (public)
-// app.get('/api/social-links', (_, res) => {
-//   const links = db.prepare(`
-//     SELECT * FROM social_links 
-//     WHERE is_active=1 
-//     ORDER BY display_order
-//   `).all();
-//   res.json(links);
-// });
-
-// // GET all social links (admin)
-// app.get('/api/admin/social-links', adminAuth, (_, res) => {
-//   const links = db.prepare(`
-//     SELECT * FROM social_links 
-//     ORDER BY display_order
-//   `).all();
-//   res.json(links);
-// });
-
-// // UPDATE social link (admin)
-// app.put('/api/admin/social-links/:id', adminAuth, (req, res) => {
-//   const { url, is_active, display_order } = req.body;
-
-//   db.prepare(`
-//     UPDATE social_links 
-//     SET url = COALESCE(?, url),
-//         is_active = COALESCE(?, is_active),
-//         display_order = COALESCE(?, display_order)
-//     WHERE id=?
-//   `).run(url, is_active, display_order, req.params.id);
-
-//   const updated = db.prepare(`SELECT * FROM social_links WHERE id=?`).get(req.params.id);
-//   res.json(updated);
-// });
-
-/* ---------- SOCIAL LINKS ---------- */
 
 // GET all social links (public)
-app.get('/api/social-links', (_, res) => {
+app.get('/api/socials', (_, res) => {
   const links = db.prepare(`
     SELECT * FROM social_links 
     WHERE is_active=1 
@@ -530,7 +520,7 @@ app.get('/api/social-links', (_, res) => {
 });
 
 // GET all social links (admin - با همه اطلاعات)
-app.get('/api/admin/social-links', adminAuth, (_, res) => {
+app.get('/api/admin/socials', adminAuth, (_, res) => {
   const links = db.prepare(`
     SELECT * FROM social_links 
     ORDER BY display_order
@@ -538,62 +528,438 @@ app.get('/api/admin/social-links', adminAuth, (_, res) => {
   res.json(links);
 });
 
-// CREATE new social link (admin)
-app.post('/api/admin/social-links', adminAuth, (req, res) => {
-  const { platform, url, icon, display_order } = req.body;
+app.post('/api/admin/socials', adminAuth, upload.single('icon'), (req, res) => {
+  try {
+    console.log('=== Social Link Upload Request ===');
+    console.log('Request body:', req.body);
+    console.log('Request file:', req.file);
+    console.log('Request headers:', req.headers['content-type']);
 
-  if (!platform || !url) {
-    return res.status(400).json({ error: 'Platform and URL are required' });
+    const { platform, url, display_order } = req.body;
+
+    // اعتبارسنجی
+    if (!platform || !platform.trim()) {
+      return res.status(400).json({ error: 'نام پلتفرم الزامی است' });
+    }
+
+    if (!url || !url.trim()) {
+      return res.status(400).json({ error: 'آدرس URL الزامی است' });
+    }
+
+    // بررسی اینکه آیا پلتفرم از قبل وجود دارد
+    const existing = db.prepare(`
+      SELECT id FROM social_links WHERE LOWER(platform)=LOWER(?)
+    `).get(platform.trim());
+
+    if (existing) {
+      return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
+    }
+
+    // مدیریت آپلود تصویر - بررسی وجود فایل
+    if (!req.file) {
+      console.log('No file uploaded!');
+      return res.status(400).json({ error: 'تصویر آیکون الزامی است' });
+    }
+
+    console.log('File uploaded successfully:', req.file);
+
+    const iconUrl = `/uploads/socials/${req.file.filename}`;
+
+    // بررسی اینکه فایل واقعاً در سرور وجود دارد
+    const filePath = path.join(__dirname, 'uploads', 'socials', req.file.filename);
+    // if (!fs.existsSync(filePath)) {
+    //   console.error('File not found on server:', filePath);
+    //   return res.status(500).json({ error: 'خطا در ذخیره فایل' });
+    // }
+
+    console.log('File saved at:', filePath);
+
+    const result = db.prepare(`
+      INSERT INTO social_links (platform, url, icon, display_order, is_active)
+      VALUES (?, ?, ?, ?, 1)
+    `).run(
+      platform.trim(),
+      url.trim(),
+      iconUrl,
+      display_order || 0
+    );
+
+    const newLink = db.prepare(`
+      SELECT * FROM social_links WHERE id=?
+    `).get(result.lastInsertRowid);
+
+    console.log('Social link created:', newLink);
+
+    res.status(201).json(newLink);
+
+  } catch (error) {
+    console.error('Error in social link creation:', error);
+    res.status(500).json({ error: 'خطای سرور' });
   }
-
-  // بررسی اینکه آیا پلتفرم از قبل وجود دارد
-  const existing = db.prepare(`
-    SELECT id FROM social_links WHERE platform=?
-  `).get(platform);
-
-  if (existing) {
-    return res.status(400).json({ error: 'Platform already exists' });
-  }
-
-  const result = db.prepare(`
-    INSERT INTO social_links (platform, url, icon, display_order, is_active)
-    VALUES (?, ?, ?, ?, 1)
-  `).run(platform, url, icon || platform, display_order || 99);
-
-  const newLink = db.prepare(`
-    SELECT * FROM social_links WHERE id=?
-  `).get(result.lastInsertRowid);
-
-  res.status(201).json(newLink);
 });
 
 // UPDATE social link (admin)
-app.put('/api/admin/social-links/:id', adminAuth, (req, res) => {
-  const { url, icon, is_active, display_order } = req.body;
+app.put('/api/admin/socials1/:id', adminAuth, upload.single('icon'), (req, res) => {
 
+  const { platform, url, is_active, display_order, remove_icon } = req.body;
+  const linkId = req.params.id;
+
+  // بررسی وجود لینک
   const existing = db.prepare(`
     SELECT * FROM social_links WHERE id=?
-  `).get(req.params.id);
+  `).get(linkId);
 
   if (!existing) {
-    return res.status(404).json({ error: 'Social link not found' });
+    return res.status(404).json({ error: 'شبکه اجتماعی پیدا نشد' });
   }
 
-  db.prepare(`
-    UPDATE social_links 
-    SET url = COALESCE(?, url),
-        icon = COALESCE(?, icon),
-        is_active = COALESCE(?, is_active),
-        display_order = COALESCE(?, display_order)
-    WHERE id=?
-  `).run(url, icon, is_active, display_order, req.params.id);
+  // بررسی تکراری نبودن نام پلتفرم
+  if (platform && platform.trim() !== existing.platform) {
+    const duplicate = db.prepare(`
+      SELECT id FROM social_links 
+      WHERE LOWER(platform)=LOWER(?) AND id != ?
+    `).get(platform.trim(), linkId);
 
-  const updated = db.prepare(`SELECT * FROM social_links WHERE id=?`).get(req.params.id);
-  res.json(updated);
+    if (duplicate) {
+      return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
+    }
+  }
+
+  // مدیریت آیکون
+  let iconUrl = existing.icon;
+
+  // اگر فایل جدید آپلود شده
+  if (req.file) {
+    // حذف تصویر قبلی اگر وجود دارد
+    if (existing.icon) {
+      const oldIconPath = existing.icon.replace('/uploads/socials/', 'uploads/socials/');
+      if (fs.existsSync(oldIconPath)) {
+        fs.unlinkSync(oldIconPath);
+      }
+    }
+    iconUrl = `/uploads/socials/${req.file.filename}`;
+  }
+
+  // اگر کاربر خواست آیکون را حذف کند
+  if (remove_icon === 'true') {
+    if (existing.icon) {
+      const oldIconPath = existing.icon.replace('/uploads/socials/', 'uploads/socials/');
+      if (fs.existsSync(oldIconPath)) {
+        fs.unlinkSync(oldIconPath);
+        console.log("5 -- ");
+      }
+    }
+    iconUrl = null;
+  }
+});
+
+app.put('/api/admin/socials2/:id', adminAuth, upload.single('icon'), (req, res) => {
+  try {
+    const { platform, url, is_active, display_order, remove_icon } = req.body;
+    const linkId = req.params.id;
+
+    // بررسی وجود لینک
+    const existing = db.prepare('SELECT * FROM social_links WHERE id=?').get(linkId);
+    if (!existing) {
+      return res.status(404).json({ error: 'شبکه اجتماعی پیدا نشد' });
+    }
+
+    // ساختن query به صورت داینامیک
+    const updates = [];
+    const params = [];
+
+    // مدیریت فیلدهای متنی
+    if (platform !== undefined) {
+      const trimmedPlatform = platform.trim();
+      if (trimmedPlatform.length === 0) {
+        return res.status(400).json({ error: 'نام پلتفرم نمی‌تواند خالی باشد' });
+      }
+
+      // بررسی تکراری نبودن
+      if (trimmedPlatform.toLowerCase() !== existing.platform.toLowerCase()) {
+        const duplicate = db.prepare(`
+          SELECT id FROM social_links 
+          WHERE LOWER(platform)=LOWER(?) AND id != ?
+        `).get(trimmedPlatform, linkId);
+        if (duplicate) {
+          return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
+        }
+      }
+
+      updates.push('platform = ?');
+      params.push(trimmedPlatform);
+    }
+
+    if (url !== undefined) {
+      const trimmedUrl = url.trim();
+      if (trimmedUrl.length === 0) {
+        return res.status(400).json({ error: 'آدرس URL نمی‌تواند خالی باشد' });
+      }
+      updates.push('url = ?');
+      params.push(trimmedUrl);
+    }
+
+    // مدیریت boolean fields
+    if (is_active !== undefined) {
+      updates.push('is_active = ?');
+      params.push(is_active === 'true' || is_active === true || is_active === 1 ? 1 : 0);
+    }
+
+    if (display_order !== undefined) {
+      updates.push('display_order = ?');
+      params.push(parseInt(display_order) || 0);
+    }
+
+    // مدیریت آیکون
+    let iconUrl = existing.icon;
+
+    // اگر فایل جدید آپلود شده
+    if (req.file) {
+      // حذف تصویر قبلی
+      if (existing.icon) {
+        const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
+        if (fs.existsSync(oldIconPath)) {
+          fs.unlinkSync(oldIconPath);
+        }
+      }
+      iconUrl = `/uploads/socials/${req.file.filename}`;
+      updates.push('icon = ?');
+      params.push(iconUrl);
+    }
+
+    // اگر خواست آیکون حذف شود
+    if (remove_icon === 'true' || remove_icon === true) {
+      if (existing.icon) {
+        const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
+        if (fs.existsSync(oldIconPath)) {
+          fs.unlinkSync(oldIconPath);
+        }
+      }
+      iconUrl = null;
+      updates.push('icon = ?');
+      params.push(null);
+    }
+
+    // اگر هیچ فیلدی برای به‌روزرسانی نیست
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'هیچ فیلدی برای به‌روزرسانی ارسال نشده' });
+    }
+
+    // اضافه کردن updated_at
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+
+    // اضافه کردن ID به پارامترها
+    params.push(linkId);
+
+    // اجرای به‌روزرسانی
+    const query = `UPDATE social_links SET ${updates.join(', ')} WHERE id = ?`;
+    const stmt = db.prepare(query);
+    const result = stmt.run(...params);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'هیچ تغییری اعمال نشد' });
+    }
+
+    // دریافت اطلاعات به‌روزرسانی شده
+    const updatedLink = db.prepare('SELECT * FROM social_links WHERE id=?').get(linkId);
+
+    res.json({
+      success: true,
+      message: 'لینک اجتماعی با موفقیت به‌روزرسانی شد',
+      data: updatedLink
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({
+      error: 'خطای سرور',
+      details: error.message
+    });
+  }
+});
+
+app.put('/api/admin/socials/:id', adminAuth, upload.single('icon'), (req, res) => {
+  try {
+    console.log('=== Update Social Link Request ===');
+    console.log('ID:', req.params.id);
+    console.log('Body:', req.body);
+    console.log('File:', req.file);
+    console.log('Remove icon:', req.body.remove_icon);
+
+    const { platform, url, is_active, display_order, remove_icon } = req.body;
+    const linkId = req.params.id;
+
+    // اعتبارسنجی ID
+    if (!linkId || isNaN(parseInt(linkId))) {
+      return res.status(400).json({ error: 'شناسه معتبر الزامی است' });
+    }
+
+    // بررسی وجود لینک
+    const existing = db.prepare(`
+      SELECT * FROM social_links WHERE id = ?
+    `).get(linkId);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'شبکه اجتماعی پیدا نشد' });
+    }
+
+    // console.log('@@@@@@@@@@@.  ' + is_active);
+
+    // آماده‌سازی مقادیر برای به‌روزرسانی
+    const updateFields = {
+      platform: platform !== undefined ? platform.trim() : existing.platform,
+      url: url !== undefined ? url.trim() : existing.url,
+      is_active: is_active !== undefined ?
+        (is_active === 'true' || is_active === true || is_active === 1 ? 1 : 0) :
+        existing.is_active,
+      display_order: display_order !== undefined ?
+        parseInt(display_order) :
+        existing.display_order
+    };
+
+    // اعتبارسنجی فیلدهای اجباری
+    if (updateFields.platform && updateFields.platform.length === 0) {
+      return res.status(400).json({ error: 'نام پلتفرم نمی‌تواند خالی باشد' });
+    }
+
+    if (updateFields.url && updateFields.url.length === 0) {
+      return res.status(400).json({ error: 'آدرس URL نمی‌تواند خالی باشد' });
+    }
+
+    // بررسی تکراری نبودن نام پلتفرم (UNIQUE constraint)
+    if (updateFields.platform && updateFields.platform.toLowerCase() !== existing.platform.toLowerCase()) {
+      const duplicate = db.prepare(`
+        SELECT id FROM social_links 
+        WHERE LOWER(platform) = LOWER(?) AND id != ?
+      `).get(updateFields.platform, linkId);
+
+      if (duplicate) {
+        return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
+      }
+    }
+
+    // مدیریت آیکون
+    let iconUrl = existing.icon;
+
+    // اگر فایل جدید آپلود شده
+    if (req.file) {
+      console.log('New icon uploaded:', req.file.filename);
+
+      // حذف تصویر قبلی اگر وجود دارد
+      if (existing.icon) {
+        const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
+        try {
+          if (fs.existsSync(oldIconPath)) {
+            fs.unlinkSync(oldIconPath);
+            console.log('Old icon deleted:', oldIconPath);
+          }
+        } catch (err) {
+          console.warn('Could not delete old icon:', err.message);
+        }
+      }
+      iconUrl = `/uploads/socials/${req.file.filename}`;
+    }
+
+    // اگر کاربر خواست آیکون را حذف کند
+    if (remove_icon === 'true' || remove_icon === true) {
+      console.log('Removing existing icon');
+      if (existing.icon) {
+        const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
+        try {
+          if (fs.existsSync(oldIconPath)) {
+            fs.unlinkSync(oldIconPath);
+            console.log('Icon removed from filesystem');
+          }
+        } catch (err) {
+          console.warn('Could not delete icon:', err.message);
+        }
+      }
+      iconUrl = null;
+    }
+
+    // ساختن query به صورت داینامیک
+    const updates = [];
+    const params = [];
+
+    // اضافه کردن فیلدهای قابل به‌روزرسانی
+    if (platform !== undefined) {
+      updates.push('platform = ?');
+      params.push(updateFields.platform);
+    }
+
+    if (url !== undefined) {
+      updates.push('url = ?');
+      params.push(updateFields.url);
+    }
+
+    if (is_active !== undefined) {
+      updates.push('is_active = ?');
+      params.push(updateFields.is_active);
+    }
+
+    if (display_order !== undefined) {
+      updates.push('display_order = ?');
+      params.push(updateFields.display_order);
+    }
+
+    // مدیریت آیکون (اگر تغییر کرده)
+    if (req.file || remove_icon === 'true' || remove_icon === true) {
+      updates.push('icon = ?');
+      params.push(iconUrl);
+    }
+
+    // اگر هیچ فیلدی برای به‌روزرسانی نیست
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'هیچ فیلدی برای به‌روزرسانی ارسال نشده' });
+    }
+
+    // اضافه کردن ID به پارامترها
+    params.push(linkId);
+
+    // اجرای به‌روزرسانی
+    const query = `UPDATE social_links SET ${updates.join(', ')} WHERE id = ?`;
+    console.log('Update query:', query);
+    console.log('Params:', params);
+
+    const stmt = db.prepare(query);
+    const result = stmt.run(...params);
+
+    console.log('Update result:', result);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'هیچ تغییری اعمال نشد' });
+    }
+
+    // دریافت لینک به‌روزرسانی شده
+    const updatedLink = db.prepare(`
+      SELECT * FROM social_links WHERE id = ?
+    `).get(linkId);
+
+    console.log('Updated link:', updatedLink);
+
+    res.json({
+      success: true,
+      message: 'لینک اجتماعی با موفقیت به‌روزرسانی شد',
+      data: updatedLink
+    });
+
+  } catch (error) {
+    console.error('Error updating social link:', error);
+
+    // بررسی خطای UNIQUE constraint
+    if (error.message && error.message.includes('UNIQUE constraint failed')) {
+      return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
+    }
+
+    res.status(500).json({
+      error: 'خطای سرور در به‌روزرسانی لینک اجتماعی',
+      details: error.message
+    });
+  }
 });
 
 // DELETE social link (admin)
-app.delete('/api/admin/social-links/:id', adminAuth, (req, res) => {
+app.delete('/api/admin/socials/:id', adminAuth, (req, res) => {
   const { id } = req.params;
 
   const existing = db.prepare(`
@@ -601,64 +967,53 @@ app.delete('/api/admin/social-links/:id', adminAuth, (req, res) => {
   `).get(id);
 
   if (!existing) {
-    return res.status(404).json({ error: 'Social link not found' });
+    return res.status(404).json({ error: 'شبکه اجتماعی پیدا نشد' });
   }
 
-  // بررسی اینکه آیا می‌توان حذف کرد (اگر از پلتفرم‌های پیش‌فرض باشد، می‌توان غیرفعال کرد ولی حذف نکرد)
-  const isDefault = ['telegram', 'instagram', 'pinterest', 'aparat', 'youtube', 'whatsapp']
-    .includes(existing.platform);
-
-  if (isDefault) {
-    // برای پلتفرم‌های پیش‌فرض، فقط غیرفعال می‌کنیم
-    db.prepare(`
-      UPDATE social_links 
-      SET is_active = 0 
-      WHERE id=?
-    `).run(id);
-
-    res.json({
-      success: true,
-      message: 'Default social link deactivated (not deleted)',
-      deactivated: true
-    });
-  } else {
-    // برای پلتفرم‌های دلخواه، حذف می‌کنیم
-    db.prepare(`DELETE FROM social_links WHERE id=?`).run(id);
-    res.json({
-      success: true,
-      message: 'Social link deleted successfully',
-      deleted: true
-    });
+  // حذف تصویر آیکون اگر وجود دارد
+  if (existing.icon) {
+    const iconPath = existing.icon.replace('/uploads/socials/', 'uploads/socials/');
+    if (fs.existsSync(iconPath)) {
+      fs.unlinkSync(iconPath);
+    }
   }
+
+  db.prepare(`DELETE FROM social_links WHERE id=?`).run(id);
+
+  res.json({
+    success: true,
+    message: 'شبکه اجتماعی با موفقیت حذف شد'
+  });
 });
 
 // BULK UPDATE social links order (admin)
-app.put('/api/admin/social-links/order', adminAuth, (req, res) => {
-  const { order } = req.body; // آرایه‌ای از {id, display_order}
+// app.put('/api/admin/socials/order', adminAuth, (req, res) => {
+//   const { order } = req.body; // آرایه‌ای از {id, display_order}
 
-  if (!Array.isArray(order)) {
-    return res.status(400).json({ error: 'Order array is required' });
-  }
+//   if (!Array.isArray(order)) {
+//     return res.status(400).json({ error: 'آرایه ترتیب الزامی است' });
+//   }
 
-  const updateStmt = db.prepare(`
-    UPDATE social_links 
-    SET display_order = ? 
-    WHERE id = ?
-  `);
+//   const updateStmt = db.prepare(`
+//     UPDATE social_links 
+//     SET display_order = ? 
+//     WHERE id = ?
+//   `);
 
-  const transaction = db.transaction((items) => {
-    for (const item of items) {
-      updateStmt.run(item.display_order, item.id);
-    }
-  });
+//   const transaction = db.transaction((items) => {
+//     for (const item of items) {
+//       updateStmt.run(item.display_order, item.id);
+//     }
+//   });
 
-  try {
-    transaction(order);
-    res.json({ success: true, message: 'Order updated successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update order' });
-  }
-});
+//   try {
+//     transaction(order);
+//     res.json({ success: true, message: 'ترتیب نمایش با موفقیت به‌روزرسانی شد' });
+//   } catch (error) {
+//     console.error('Error updating order:', error);
+//     res.status(500).json({ error: 'خطا در به‌روزرسانی ترتیب' });
+//   }
+// });
 
 /* ---------- SITE SETTINGS ---------- */
 // GET site settings (public)
@@ -710,9 +1065,9 @@ app.post('/api/admin/carousel', adminAuth, upload.single('image'), (req, res) =>
   }
 
   db.prepare(`
-    INSERT INTO images (url, title, type)
-    VALUES (?, ?, 'carousel')
-  `).run(`/uploads/${req.file.filename}`, req.body.title || 'Carousel Image');
+    INSERT INTO images (url, title, type, price, off, is_tooman)
+    VALUES (?, ?, 'carousel', 0,0,true)
+  `).run(`/uploads/carousel/${req.file.filename}`, req.body.title || 'Carousel Image');
 
   res.json({ success: true });
 });
@@ -726,7 +1081,7 @@ app.delete('/api/admin/carousel/:id', adminAuth, (req, res) => {
   }
 
   // حذف فایل
-  const imagePath = image.url.replace('/uploads/', 'uploads/');
+  const imagePath = image.url.replace('/uploads/carousel/', 'uploads/carousel/');
   if (fs.existsSync(imagePath)) {
     fs.unlinkSync(imagePath);
   }
@@ -744,7 +1099,7 @@ app.get('/api/data', (_, res) => {
     SELECT * FROM images WHERE type='carousel' ORDER BY id DESC LIMIT ?
   `).all(settings.max_carousel_items);
   const socialLinks = db.prepare(`
-    SELECT * FROM social_links WHERE is_active=1 ORDER BY display_order
+    SELECT * FROM social_links  WHERE is_active = 1 ORDER BY display_order
   `).all();
 
   res.json({
