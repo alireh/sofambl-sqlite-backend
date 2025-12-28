@@ -16,7 +16,7 @@ console.log('NODE_ENV:', process.env.NODE_ENV);
 let dbPath;
 if (process.env.NODE_ENV === 'production') {
   // در Railway از مسیر persistent
-  dbPath = '/data/database.sqlite';
+  dbPath = 'database.sqlite';
   console.log('Using production database path:', dbPath);
   
   // ایجاد پوشه /data اگر وجود ندارد
