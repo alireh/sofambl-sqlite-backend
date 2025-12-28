@@ -1,28 +1,19 @@
 {
   "name": "sofambl-sqlite-backend",
   "version": "1.0.0",
-  "main": "index.js",
   "type": "module",
   "scripts": {
     "build": "esbuild server.js --bundle --platform=node --outfile=dist/server.js --format=esm",
     "start": "node dist/server.js",
     "dev": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.5.0",
+    "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "multer": "^2.0.2"
-  },
-  "devDependencies": {
-    "esbuild": "^0.27.2",
-    "nodemon": "^3.1.11"
+    "multer": "^1.4.5-lts.1",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "sqlite3": "^5.1.6",
+    "dotenv": "^16.3.1"
   }
 }
