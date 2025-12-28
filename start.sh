@@ -1,18 +1,25 @@
 #!/bin/bash
-echo "=== Starting Application ==="
-echo "Node version: $(node --version)"
-echo "NPM version: $(npm --version)"
+echo "=== Starting Sofambl Backend ==="
+echo "Time: $(date)"
+echo "Node: $(node --version)"
+echo "NPM: $(npm --version)"
 echo "PORT: $PORT"
 echo "NODE_ENV: $NODE_ENV"
-echo "Current directory: $(pwd)"
+echo "PWD: $(pwd)"
 echo ""
-echo "Files in directory:"
-ls -la
-echo ""
-echo "Files in dist directory:"
-ls -la dist/ 2>/dev/null || echo "dist directory not found"
-echo ""
-echo "=== Starting Server ==="
 
-# اجرای سرور با دیباگ
-node --trace-warnings dist/server.js
+# ساخت پوشه‌های مورد نیاز
+mkdir -p uploads dist
+
+# Build اگر dist/server.js وجود ندارد
+if [ ! -f "dist/server.js" ]; then
+  echo "Building application..."
+  npm run build
+fi
+
+echo "File size of dist/server.js: $(wc -c < dist/server.js) bytes"
+echo ""
+
+# اجرای سرور
+echo "=== Starting Node Server ==="
+cd dist && exec node --trace-warnings server.js
