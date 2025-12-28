@@ -8,6 +8,7 @@ echo "NODE_ENV: $NODE_ENV"
 echo "PWD: $(pwd)"
 echo ""
 
+sleep 5
 # ساخت پوشه‌های مورد نیاز
 mkdir -p uploads dist
 

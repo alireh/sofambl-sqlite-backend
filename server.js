@@ -23,6 +23,8 @@ console.log('  PORT:', process.env.PORT);
 console.log('  NODE_ENV:', process.env.NODE_ENV);
 console.log('  PWD:', process.cwd());
 
+
+
 import fs from 'fs';
 console.log('Directory contents:');
 try {
