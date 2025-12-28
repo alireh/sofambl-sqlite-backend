@@ -12,7 +12,7 @@
   import { fileURLToPath } from 'url';
   import { dirname } from 'path';
 
-  
+
 // === CRITICAL DEBUG ===
 console.log('🚀🚀🚀 SERVER.JS IS EXECUTING! 🚀🚀🚀');
 console.log('Timestamp:', new Date().toISOString());
@@ -31,6 +31,11 @@ try {
 } catch (e) {
   console.error('Error reading dir:', e.message);
 }
+
+app.use(cors({
+  origin: ['https://your-frontend-domain.com', 'http://localhost:3000'],
+  credentials: true
+}));
 
 // Wrap everything in try-catch
 try {
