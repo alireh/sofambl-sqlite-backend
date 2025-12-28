@@ -1,18 +1,14 @@
-// auth.js
 import jwt from 'jsonwebtoken';
 
-export function adminAuth(req, res, next) {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
-    }
+export const adminAuth = (req, res, next) => {
+  const header = req.headers.authorization;
+  if (!header) return res.status(401).json({ error: 'No token' });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+  const token = header.split(' ')[1];
+  try {
+    req.admin = jwt.verify(token, process.env.JWT_SECRET);
     next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
   }
-}
+};

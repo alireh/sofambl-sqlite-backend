@@ -6,6 +6,12 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { initDatabase } from './init-db.js';
 import 'dotenv/config';
+import dotenv from "dotenv";
+
+
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config();
+}
 
 import db from './db.js';
 import { adminAuth } from './auth.js';
@@ -13,6 +19,12 @@ import { adminAuth } from './auth.js';
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.get("/", (req, res) => {
+  res.send("API is running");
+});
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 app.use('/uploads', express.static('uploads'));
 
 
@@ -144,9 +156,12 @@ app.delete('/api/admin/image/:id', adminAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(process.env.PORT, () =>
-  console.log(`Server running on ${process.env.PORT}`)
-);
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
 
 /* ---------- ARTICLES ---------- */
 // GET all articles (public)
@@ -281,10 +296,6 @@ app.get('/api/admin/articles', adminAuth, (_, res) => {
 
 /* ---------- CATEGORIES ---------- */
 // GET all categories (public)
-app.get('/api/ping', (_, res) => {
-  res.json("OK");
-});
-
 app.get('/api/categories', (_, res) => {
   const categories = db.prepare(`
     SELECT c.*, 
