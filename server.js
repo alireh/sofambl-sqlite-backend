@@ -281,6 +281,10 @@ app.get('/api/admin/articles', adminAuth, (_, res) => {
 
 /* ---------- CATEGORIES ---------- */
 // GET all categories (public)
+app.get('/api/ping', (_, res) => {
+  res.json("OK");
+});
+
 app.get('/api/categories', (_, res) => {
   const categories = db.prepare(`
     SELECT c.*, 
