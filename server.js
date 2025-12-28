@@ -48,6 +48,11 @@ try {
   console.log('✅ Database initialized');
   
   const app = express();
+
+  app.use(cors({
+    origin: ['https://your-frontend-domain.com', 'http://localhost:3000'],
+    credentials: true
+  }));
   
   // Middleware
   app.use(cors());
