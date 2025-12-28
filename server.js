@@ -49,6 +49,54 @@ try {
   
   const app = express();
 
+  let isReady = false;
+setTimeout(() => {
+  isReady = true;
+  console.log('✅ Application is now ready for health checks');
+}, 5000); // 5 ثانیه تاخیر
+
+app.get('/health', (req, res) => {
+  if (!isReady) {
+    return res.status(503).json({ 
+      status: 'starting', 
+      message: 'Application is starting up' 
+    });
+  }
+  
+  try {
+    // بررسی دیتابیس
+    db.prepare('SELECT 1 as health_check').get();
+    
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'connected'
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: 'Database connection failed'
+    });
+  }
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Sofambl Furniture Backend API',
+    status: 'running',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      public: ['/api/articles', '/api/categories', '/api/products', '/api/socials'],
+      admin: ['/api/admin/login', '/api/admin/articles'],
+      health: '/health'
+    }
+  });
+});
+
   app.use(cors({
     origin: ['https://your-frontend-domain.com', 'http://localhost:3000'],
     credentials: true
