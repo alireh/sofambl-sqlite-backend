@@ -144,9 +144,51 @@ app.delete('/api/admin/image/:id', adminAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(process.env.PORT, () =>
-  console.log(`Server running on ${process.env.PORT}`)
-);
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
+
+// app.listen(process.env.PORT, () =>
+//   console.log(`Server running on ${process.env.PORT}`)
+// );
+
+
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    port: process.env.PORT 
+  });
+});
+
+// Start server با تنظیمات درست
+const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
+
+app.listen(PORT, HOST, () => {
+  console.log('================================');
+  console.log(`🚀 Server is running!`);
+  console.log(`📡 URL: http://${HOST}:${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`⏰ Started at: ${new Date().toISOString()}`);
+  console.log('================================');
+  
+  // Log all routes for debugging
+  const routes = [];
+  app._router.stack.forEach(middleware => {
+    if (middleware.route) {
+      routes.push(middleware.route.path);
+    } else if (middleware.name === 'router') {
+      middleware.handle.stack.forEach(handler => {
+        if (handler.route) {
+          routes.push(handler.route.path);
+        }
+      });
+    }
+  });
+  console.log('📋 Available routes:', routes);
+});
 
 /* ---------- ARTICLES ---------- */
 // GET all articles (public)
