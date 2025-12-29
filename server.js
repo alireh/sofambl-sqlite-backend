@@ -19,21 +19,6 @@ import { adminAuth } from './auth.js';
 const email = 'admin@test.com';
 const password = '123456';
 
-const existingAdmin = db.prepare(`SELECT * FROM admins WHERE email = ?`).get(email);
-
-if (existingAdmin) {
-  console.log('ادمین قبلاً وجود دارد:', existingAdmin.email);
-} else {
-  db.prepare(`
-    INSERT INTO admins (email, password)
-    VALUES (?, ?)
-  `).run(
-    email,
-    bcrypt.hashSync(password, 10)
-  );
-  console.log('ادمین جدید ایجاد شد:', email);
-}
-
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -111,9 +96,6 @@ const upload = multer({
   }
 });
 
-// مقداردهی اولیه دیتابیس
-// initDatabase();
-
 // بقیه کدهای سرور...
 
 app.use(express.urlencoded({ extended: true }));
@@ -177,6 +159,42 @@ app.delete('/api/admin/image/:id', adminAuth, (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 initDatabase();
+const existingAdmin = db.prepare(`SELECT * FROM admins WHERE email = ?`).get(email);
+
+if (existingAdmin) {
+  console.log('ادمین قبلاً وجود دارد:', existingAdmin.email);
+} else {
+  db.prepare(`
+    INSERT INTO admins (email, password)
+    VALUES (?, ?)
+  `).run(
+    email,
+    bcrypt.hashSync(password, 10)
+  );
+  console.log('ادمین جدید ایجاد شد:', email);
+}
+
+
+const socialPlatforms = [
+  { platform: 'telegram', url: '#', icon: 'uploads/socials/telegram.png', display_order: 1 },
+  { platform: 'instagram', url: '#', icon: 'uploads/socials/instagram.png', display_order: 2 },
+  { platform: 'pinterest', url: '#', icon: 'uploads/socials/pinterest.png', display_order: 3 },
+  { platform: 'aparat', url: '#', icon: 'uploads/socials/aparat.png', display_order: 4 },
+  { platform: 'youtube', url: '#', icon: 'uploads/socials/youtube.png', display_order: 5 },
+  { platform: 'whatsapp', url: '#', icon: 'uploads/socials/whatsapp.png', display_order: 6 }
+];
+
+socialPlatforms.forEach(platform => {
+  const exists = db.prepare(`SELECT id FROM social_links WHERE platform=?`).get(platform.platform);
+  if (!exists) {
+    db.prepare(`
+      INSERT INTO social_links (platform, url, icon, display_order)
+      VALUES (?, ?, ?, ?)
+    `).run(platform.platform, platform.url, platform.icon, platform.display_order);
+  }
+});
+console.log('Social networks added');
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
@@ -656,8 +674,6 @@ app.put('/api/admin/socials/:id', adminAuth, upload.single('icon'), (req, res) =
     if (!existing) {
       return res.status(404).json({ error: 'شبکه اجتماعی پیدا نشد' });
     }
-
-    // console.log('@@@@@@@@@@@.  ' + is_active);
 
     // آماده‌سازی مقادیر برای به‌روزرسانی
     const updateFields = {
