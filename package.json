@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "esbuild server.js --bundle --platform=node --outfile=dist/server.js --format=esm"
+    "build": "esbuild server.js --bundle --platform=node --outfile=dist/server.js --format=esm",
+    "create-admin": "node create-admin.js"
   },
   "keywords": [],
   "author": "",
