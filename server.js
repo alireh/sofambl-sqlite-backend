@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
@@ -6,12 +9,11 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { initDatabase } from './init-db.js';
 import 'dotenv/config';
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
 
-
-if (process.env.NODE_ENV !== "production") {
-  dotenv.config();
-}
+// if (process.env.NODE_ENV !== "production") {
+//   dotenv.config();
+// }
 
 import db from './db.js';
 import { adminAuth } from './auth.js';
