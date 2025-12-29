@@ -659,163 +659,261 @@ app.post('/api/admin/socials', adminAuth, upload.single('icon'), (req, res) => {
   }
 });
 
+// app.put('/api/admin/socials/:id', adminAuth, upload.single('icon'), (req, res) => {
+//   try {
+//     console.log('=== Update Social Link Request ===');
+//     console.log('ID:', req.params.id);
+//     console.log('Body:', req.body);
+//     console.log('File:', req.file);
+//     console.log('Remove icon:', req.body.remove_icon);
+
+//     const { platform, url, is_active, display_order, remove_icon } = req.body;
+//     const linkId = req.params.id;
+
+//     // اعتبارسنجی ID
+//     if (!linkId || isNaN(parseInt(linkId))) {
+//       return res.status(400).json({ error: 'شناسه معتبر الزامی است' });
+//     }
+
+//     // بررسی وجود لینک
+//     const existing = db.prepare(`
+//       SELECT * FROM social_links WHERE id = ?
+//     `).get(linkId);
+
+//     if (!existing) {
+//       return res.status(404).json({ error: 'شبکه اجتماعی پیدا نشد' });
+//     }
+
+//     // آماده‌سازی مقادیر برای به‌روزرسانی
+//     const updateFields = {
+//       platform: platform !== undefined ? platform.trim() : existing.platform,
+//       url: url !== undefined ? url.trim() : existing.url,
+//       is_active: is_active !== undefined ?
+//         (is_active === 'true' || is_active === true || is_active === 1 ? 1 : 0) :
+//         existing.is_active,
+//       display_order: display_order !== undefined ?
+//         parseInt(display_order) :
+//         existing.display_order
+//     };
+
+//     // اعتبارسنجی فیلدهای اجباری
+//     if (updateFields.platform && updateFields.platform.length === 0) {
+//       return res.status(400).json({ error: 'نام پلتفرم نمی‌تواند خالی باشد' });
+//     }
+
+//     if (updateFields.url && updateFields.url.length === 0) {
+//       return res.status(400).json({ error: 'آدرس URL نمی‌تواند خالی باشد' });
+//     }
+
+//     // بررسی تکراری نبودن نام پلتفرم (UNIQUE constraint)
+//     if (updateFields.platform && updateFields.platform.toLowerCase() !== existing.platform.toLowerCase()) {
+//       const duplicate = db.prepare(`
+//         SELECT id FROM social_links 
+//         WHERE LOWER(platform) = LOWER(?) AND id != ?
+//       `).get(updateFields.platform, linkId);
+
+//       if (duplicate) {
+//         return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
+//       }
+//     }
+
+//     // مدیریت آیکون
+//     let iconUrl = existing.icon;
+
+//     // اگر فایل جدید آپلود شده
+//     if (req.file) {
+//       console.log('New icon uploaded:', req.file.filename);
+
+//       // حذف تصویر قبلی اگر وجود دارد
+//       if (existing.icon) {
+//         const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
+//         try {
+//           if (fs.existsSync(oldIconPath)) {
+//             fs.unlinkSync(oldIconPath);
+//             console.log('Old icon deleted:', oldIconPath);
+//           }
+//         } catch (err) {
+//           console.warn('Could not delete old icon:', err.message);
+//         }
+//       }
+//       iconUrl = `/uploads/socials/${req.file.filename}`;
+//     }
+
+//     // اگر کاربر خواست آیکون را حذف کند
+//     if (remove_icon === 'true' || remove_icon === true) {
+//       console.log('Removing existing icon');
+//       if (existing.icon) {
+//         const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
+//         try {
+//           if (fs.existsSync(oldIconPath)) {
+//             fs.unlinkSync(oldIconPath);
+//             console.log('Icon removed from filesystem');
+//           }
+//         } catch (err) {
+//           console.warn('Could not delete icon:', err.message);
+//         }
+//       }
+//       iconUrl = null;
+//     }
+
+//     // ساختن query به صورت داینامیک
+//     const updates = [];
+//     const params = [];
+
+//     // اضافه کردن فیلدهای قابل به‌روزرسانی
+//     if (platform !== undefined) {
+//       updates.push('platform = ?');
+//       params.push(updateFields.platform);
+//     }
+
+//     if (url !== undefined) {
+//       updates.push('url = ?');
+//       params.push(updateFields.url);
+//     }
+
+//     if (is_active !== undefined) {
+//       updates.push('is_active = ?');
+//       params.push(updateFields.is_active);
+//     }
+
+//     if (display_order !== undefined) {
+//       updates.push('display_order = ?');
+//       params.push(updateFields.display_order);
+//     }
+
+//     // مدیریت آیکون (اگر تغییر کرده)
+//     if (req.file || remove_icon === 'true' || remove_icon === true) {
+//       updates.push('icon = ?');
+//       params.push(iconUrl);
+//     }
+
+//     // اگر هیچ فیلدی برای به‌روزرسانی نیست
+//     if (updates.length === 0) {
+//       return res.status(400).json({ error: 'هیچ فیلدی برای به‌روزرسانی ارسال نشده' });
+//     }
+
+//     // اضافه کردن ID به پارامترها
+//     params.push(linkId);
+
+//     // اجرای به‌روزرسانی
+//     const query = `UPDATE social_links SET ${updates.join(', ')} WHERE id = ?`;
+//     console.log('Update query:', query);
+//     console.log('Params:', params);
+
+//     const stmt = db.prepare(query);
+//     const result = stmt.run(...params);
+
+//     console.log('Update result:', result);
+
+//     if (result.changes === 0) {
+//       return res.status(404).json({ error: 'هیچ تغییری اعمال نشد' });
+//     }
+
+//     // دریافت لینک به‌روزرسانی شده
+//     const updatedLink = db.prepare(`
+//       SELECT * FROM social_links WHERE id = ?
+//     `).get(linkId);
+
+//     console.log('Updated link:', updatedLink);
+
+//     res.json({
+//       success: true,
+//       message: 'لینک اجتماعی با موفقیت به‌روزرسانی شد',
+//       data: updatedLink
+//     });
+
+//   } catch (error) {
+//     console.error('Error updating social link:', error);
+
+//     // بررسی خطای UNIQUE constraint
+//     if (error.message && error.message.includes('UNIQUE constraint failed')) {
+//       return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
+//     }
+
+//     res.status(500).json({
+//       error: 'خطای سرور در به‌روزرسانی لینک اجتماعی',
+//       details: error.message
+//     });
+//   }
+// });
+
 app.put('/api/admin/socials/:id', adminAuth, upload.single('icon'), (req, res) => {
   try {
-    console.log('=== Update Social Link Request ===');
-    console.log('ID:', req.params.id);
-    console.log('Body:', req.body);
-    console.log('File:', req.file);
-    console.log('Remove icon:', req.body.remove_icon);
+    const linkId = parseInt(req.params.id);
+    if (isNaN(linkId)) return res.status(400).json({ error: 'شناسه معتبر الزامی است' });
+
+    const existing = db.prepare(`SELECT * FROM social_links WHERE id = ?`).get(linkId);
+    if (!existing) return res.status(404).json({ error: 'شبکه اجتماعی پیدا نشد' });
 
     const { platform, url, is_active, display_order, remove_icon } = req.body;
-    const linkId = req.params.id;
 
-    // اعتبارسنجی ID
-    if (!linkId || isNaN(parseInt(linkId))) {
-      return res.status(400).json({ error: 'شناسه معتبر الزامی است' });
-    }
-
-    // بررسی وجود لینک
-    const existing = db.prepare(`
-      SELECT * FROM social_links WHERE id = ?
-    `).get(linkId);
-
-    if (!existing) {
-      return res.status(404).json({ error: 'شبکه اجتماعی پیدا نشد' });
-    }
-
-    // آماده‌سازی مقادیر برای به‌روزرسانی
-    const updateFields = {
-      platform: platform !== undefined ? platform.trim() : existing.platform,
-      url: url !== undefined ? url.trim() : existing.url,
-      is_active: is_active !== undefined ?
-        (is_active === 'true' || is_active === true || is_active === 1 ? 1 : 0) :
-        existing.is_active,
-      display_order: display_order !== undefined ?
-        parseInt(display_order) :
-        existing.display_order
-    };
-
-    // اعتبارسنجی فیلدهای اجباری
-    if (updateFields.platform && updateFields.platform.length === 0) {
-      return res.status(400).json({ error: 'نام پلتفرم نمی‌تواند خالی باشد' });
-    }
-
-    if (updateFields.url && updateFields.url.length === 0) {
-      return res.status(400).json({ error: 'آدرس URL نمی‌تواند خالی باشد' });
-    }
-
-    // بررسی تکراری نبودن نام پلتفرم (UNIQUE constraint)
-    if (updateFields.platform && updateFields.platform.toLowerCase() !== existing.platform.toLowerCase()) {
-      const duplicate = db.prepare(`
-        SELECT id FROM social_links 
-        WHERE LOWER(platform) = LOWER(?) AND id != ?
-      `).get(updateFields.platform, linkId);
-
-      if (duplicate) {
-        return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
-      }
-    }
-
-    // مدیریت آیکون
-    let iconUrl = existing.icon;
-
-    // اگر فایل جدید آپلود شده
-    if (req.file) {
-      console.log('New icon uploaded:', req.file.filename);
-
-      // حذف تصویر قبلی اگر وجود دارد
-      if (existing.icon) {
-        const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
-        try {
-          if (fs.existsSync(oldIconPath)) {
-            fs.unlinkSync(oldIconPath);
-            console.log('Old icon deleted:', oldIconPath);
-          }
-        } catch (err) {
-          console.warn('Could not delete old icon:', err.message);
-        }
-      }
-      iconUrl = `/uploads/socials/${req.file.filename}`;
-    }
-
-    // اگر کاربر خواست آیکون را حذف کند
-    if (remove_icon === 'true' || remove_icon === true) {
-      console.log('Removing existing icon');
-      if (existing.icon) {
-        const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
-        try {
-          if (fs.existsSync(oldIconPath)) {
-            fs.unlinkSync(oldIconPath);
-            console.log('Icon removed from filesystem');
-          }
-        } catch (err) {
-          console.warn('Could not delete icon:', err.message);
-        }
-      }
-      iconUrl = null;
-    }
-
-    // ساختن query به صورت داینامیک
+    // آماده‌سازی فیلدهای به‌روزرسانی
     const updates = [];
     const params = [];
 
-    // اضافه کردن فیلدهای قابل به‌روزرسانی
     if (platform !== undefined) {
+      const trimmed = platform.trim();
+      if (!trimmed) return res.status(400).json({ error: 'نام پلتفرم نمی‌تواند خالی باشد' });
+
+      // چک کردن تکراری بودن نام پلتفرم
+      const duplicate = db.prepare(`
+        SELECT id FROM social_links WHERE LOWER(platform)=LOWER(?) AND id != ?
+      `).get(trimmed, linkId);
+      if (duplicate) return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
+
       updates.push('platform = ?');
-      params.push(updateFields.platform);
+      params.push(trimmed);
     }
 
     if (url !== undefined) {
+      const trimmed = url.trim();
+      if (!trimmed) return res.status(400).json({ error: 'آدرس URL نمی‌تواند خالی باشد' });
       updates.push('url = ?');
-      params.push(updateFields.url);
+      params.push(trimmed);
     }
 
     if (is_active !== undefined) {
+      const val = is_active === 'true' || is_active === true || is_active === 1 ? 1 : 0;
       updates.push('is_active = ?');
-      params.push(updateFields.is_active);
+      params.push(val);
     }
 
     if (display_order !== undefined) {
       updates.push('display_order = ?');
-      params.push(updateFields.display_order);
+      params.push(parseInt(display_order));
     }
 
-    // مدیریت آیکون (اگر تغییر کرده)
-    if (req.file || remove_icon === 'true' || remove_icon === true) {
+    // مدیریت آیکون
+    let iconUrl = existing.icon;
+    if (req.file) {
+      // حذف آیکون قبلی
+      if (existing.icon) {
+        const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
+        if (fs.existsSync(oldIconPath)) fs.unlinkSync(oldIconPath);
+      }
+      iconUrl = `/uploads/socials/${req.file.filename}`;
+      updates.push('icon = ?');
+      params.push(iconUrl);
+    } else if (remove_icon === 'true' || remove_icon === true) {
+      if (existing.icon) {
+        const oldIconPath = path.join(__dirname, existing.icon.replace('/', ''));
+        if (fs.existsSync(oldIconPath)) fs.unlinkSync(oldIconPath);
+      }
+      iconUrl = null;
       updates.push('icon = ?');
       params.push(iconUrl);
     }
 
-    // اگر هیچ فیلدی برای به‌روزرسانی نیست
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'هیچ فیلدی برای به‌روزرسانی ارسال نشده' });
-    }
+    if (updates.length === 0) return res.status(400).json({ error: 'هیچ فیلدی برای به‌روزرسانی ارسال نشده' });
 
-    // اضافه کردن ID به پارامترها
+    // اجرای update
     params.push(linkId);
-
-    // اجرای به‌روزرسانی
-    const query = `UPDATE social_links SET ${updates.join(', ')} WHERE id = ?`;
-    console.log('Update query:', query);
-    console.log('Params:', params);
-
-    const stmt = db.prepare(query);
+    const stmt = db.prepare(`UPDATE social_links SET ${updates.join(', ')} WHERE id = ?`);
     const result = stmt.run(...params);
 
-    console.log('Update result:', result);
+    if (result.changes === 0) return res.status(404).json({ error: 'هیچ تغییری اعمال نشد' });
 
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'هیچ تغییری اعمال نشد' });
-    }
-
-    // دریافت لینک به‌روزرسانی شده
-    const updatedLink = db.prepare(`
-      SELECT * FROM social_links WHERE id = ?
-    `).get(linkId);
-
-    console.log('Updated link:', updatedLink);
-
+    const updatedLink = db.prepare(`SELECT * FROM social_links WHERE id = ?`).get(linkId);
     res.json({
       success: true,
       message: 'لینک اجتماعی با موفقیت به‌روزرسانی شد',
@@ -823,19 +921,14 @@ app.put('/api/admin/socials/:id', adminAuth, upload.single('icon'), (req, res) =
     });
 
   } catch (error) {
-    console.error('Error updating social link:', error);
-
-    // بررسی خطای UNIQUE constraint
-    if (error.message && error.message.includes('UNIQUE constraint failed')) {
+    console.error('Error updating social link:', error.message);
+    if (error.message.includes('UNIQUE constraint failed')) {
       return res.status(400).json({ error: 'این نام پلتفرم قبلاً ثبت شده است' });
     }
-
-    res.status(500).json({
-      error: 'خطای سرور در به‌روزرسانی لینک اجتماعی',
-      details: error.message
-    });
+    res.status(500).json({ error: 'خطای سرور در به‌روزرسانی لینک اجتماعی' });
   }
 });
+
 
 // DELETE social link (admin)
 app.delete('/api/admin/socials/:id', adminAuth, (req, res) => {
