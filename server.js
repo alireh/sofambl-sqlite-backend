@@ -111,6 +111,9 @@ app.post('/api/admin/login', (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
+  console.log('login JWT_SECRET =>', process.env.JWT_SECRET);
+  console.log('login JWT_EXPIRES =>', process.env.JWT_EXPIRES);
+
   const token = jwt.sign(
     { id: admin.id, email },
     process.env.JWT_SECRET,
@@ -253,6 +256,10 @@ app.post('/api/admin/articles', adminAuth, upload.single('image'), (req, res) =>
 app.put('/api/admin/articles/:id', adminAuth, upload.single('image'), (req, res) => {
   const { title, content, removeImage } = req.body;
   const articleId = req.params.id;
+
+
+  console.log('put article JWT_SECRET =>', process.env.JWT_SECRET);
+  console.log('put article JWT_EXPIRES =>', process.env.JWT_EXPIRES);
 
   // Check if article exists
   const existing = db.prepare(`
