@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
-
+console.log('JWT_SECRET on boot =>', process.env.JWT_SECRET);
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
