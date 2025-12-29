@@ -9,7 +9,7 @@ const dbPath =
 // اطمینان از وجود فولدر
 if (process.env.NODE_ENV === "production") {
   if (!fs.existsSync('/data')) {
-    fs.mkdirSync('/data', { recursive: true });
+     fs.mkdirSync('/data', { recursive: true });
   }
 }
 
