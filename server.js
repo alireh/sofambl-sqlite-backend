@@ -16,6 +16,24 @@ if (process.env.NODE_ENV !== "production") {
 import db from './db.js';
 import { adminAuth } from './auth.js';
 
+const email = 'admin@test.com';
+const password = '123456';
+
+const existingAdmin = db.prepare(`SELECT * FROM admins WHERE email = ?`).get(email);
+
+if (existingAdmin) {
+  console.log('ادمین قبلاً وجود دارد:', existingAdmin.email);
+} else {
+  db.prepare(`
+    INSERT INTO admins (email, password)
+    VALUES (?, ?)
+  `).run(
+    email,
+    bcrypt.hashSync(password, 10)
+  );
+  console.log('ادمین جدید ایجاد شد:', email);
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
