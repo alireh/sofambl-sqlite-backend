@@ -158,6 +158,7 @@ app.delete('/api/admin/image/:id', adminAuth, (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
+initDatabase();
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
