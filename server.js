@@ -16,6 +16,7 @@ import { fileURLToPath } from 'url';
 import db from './db.js';
 import { initDatabase } from './init-db.js';
 import { adminAuth } from './auth.js';
+import { fillDb } from './fill-db.js';
 
 /* ================== PATH FIX ================== */
 const __filename = fileURLToPath(import.meta.url);
@@ -176,15 +177,7 @@ app.get('/api/socials', (_, res) => {
 /* ================== INIT DB ================== */
 initDatabase();
 
-const adminEmail = 'admin@test.com';
-const adminPass = '123456';
-
-if (!db.prepare(`SELECT id FROM admins WHERE email=?`).get(adminEmail)) {
-  db.prepare(`INSERT INTO admins (email,password) VALUES (?,?)`).run(
-    adminEmail,
-    bcrypt.hashSync(adminPass, 10)
-  );
-}
+fillDb();
 
 /* ================== START ================== */
 const PORT = process.env.PORT || 3000;
