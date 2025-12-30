@@ -104,12 +104,12 @@ export function fillDb() {
   });
 
   const products = [
-    { id: '1', category_id: '1', title: 'مبل خوب', features: 'ویژگی 11', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چوب', image_url: '/uploads/products/products11.jpg' },
-    { id: '2', category_id: '1', title: 'مبل راحت', features: 'ویژگی 12', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چستر', image_url: '/uploads/products/products12.jpg' },
-    { id: '3', category_id: '1', title: 'مبل قشنگ', features: 'ویژگی 13', is_active: 'true', discount_percent: '0', price: '1200000', description: 'تخت', image_url: '/uploads/products/products13.jpg' },
-    { id: '4', category_id: '2', title: 'مبل خوب', features: 'ویژگی 21', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چوب', image_url: '/uploads/products/products21.jpg' },
-    { id: '5', category_id: '2', title: 'مبل راحت', features: 'ویژگی 22', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چستر', image_url: '/uploads/products/products22.jpg' },
-    { id: '6', category_id: '3', title: 'مبل قشنگ', features: 'ویژگی 23', is_active: 'true', discount_percent: '0', price: '1200000', description: 'تخت', image_url: '/uploads/products/products23.jpg' },
+    { id: '1', category_id: '1', title: 'مبل خوب', features: 'ویژگی 11', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چوب', image_url: '/uploads/products/product11.jpg' },
+    { id: '2', category_id: '1', title: 'مبل راحت', features: 'ویژگی 12', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چستر', image_url: '/uploads/products/product12.jpg' },
+    { id: '3', category_id: '1', title: 'مبل قشنگ', features: 'ویژگی 13', is_active: 'true', discount_percent: '0', price: '1200000', description: 'تخت', image_url: '/uploads/products/product13.jpg' },
+    { id: '4', category_id: '2', title: 'مبل خوب', features: 'ویژگی 21', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چوب', image_url: '/uploads/products/product21.jpg' },
+    { id: '5', category_id: '2', title: 'مبل راحت', features: 'ویژگی 22', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چستر', image_url: '/uploads/products/product22.jpg' },
+    { id: '6', category_id: '3', title: 'مبل قشنگ', features: 'ویژگی 23', is_active: 'true', discount_percent: '0', price: '1200000', description: 'تخت', image_url: '/uploads/products/product23.jpg' },
   ];
 
   products.forEach(x => {

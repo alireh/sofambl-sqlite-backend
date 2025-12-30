@@ -85,6 +85,29 @@ app.get("/api/categories", (_, res) => {
   res.json(categories);
 });
 
+
+app.get('/api/admin/data', adminAuth, (_, res) => {
+  const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
+  const images = db.prepare(`SELECT * FROM images WHERE type!='carousel'`).all();
+  const carouselImages = db.prepare(`SELECT * FROM images WHERE type='carousel'`).all();
+  const articles = db.prepare(`SELECT * FROM articles ORDER BY created_at DESC`).all();
+  const categories = db.prepare(`SELECT * FROM categories ORDER BY created_at DESC`).all();
+  const products = db.prepare(`SELECT * FROM products ORDER BY created_at DESC`).all();
+  const socialLinks = db.prepare(`SELECT * FROM social_links ORDER BY display_order`).all();
+  const settings = db.prepare(`SELECT * FROM site_settings WHERE id=1`).get();
+
+  res.json({
+    ...site,
+    images,
+    carouselImages,
+    articles,
+    categories,
+    products,
+    socialLinks,
+    settings
+  });
+});
+
 app.get("/api/data", (_, res) => {
   const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
   const images = db.prepare(`SELECT * FROM images WHERE type!='carousel'`).all();
@@ -146,6 +169,84 @@ app.post('/api/admin/upload', adminAuth, upload.single('image'), (req, res) => {
 /* ================== ARTICLES ================== */
 app.get('/api/articles', (_, res) => {
   res.json(db.prepare(`SELECT * FROM articles ORDER BY created_at DESC`).all());
+});
+
+// GET all articles (admin - with more details if needed)
+app.get('/api/admin/articles', adminAuth, (_, res) => {
+  const articles = db.prepare(`
+    SELECT * FROM articles 
+    ORDER BY created_at DESC
+  `).all();
+  res.json(articles);
+});
+
+// GET all categories (admin - با اطلاعات کامل)
+app.get('/api/admin/categories', adminAuth, (_, res) => {
+  const categories = db.prepare(`
+    SELECT c.*, 
+           COUNT(p.id) as product_count,
+           SUM(CASE WHEN p.is_active = 1 THEN 1 ELSE 0 END) as active_products
+    FROM categories c
+    LEFT JOIN products p ON c.id = p.category_id
+    GROUP BY c.id
+    ORDER BY c.created_at DESC
+  `).all();
+
+  res.json(categories);
+});
+
+
+// CREATE product (admin)
+app.post('/api/admin/products', adminAuth, upload.single('image'), (req, res) => {
+  const { category_id, title, price, discount_percent, description, features } = req.body;
+
+  if (!category_id || !title || !price || !req.file) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  const imageUrl = `/uploads/products/${req.file.filename}`;
+
+  const result = db.prepare(`
+    INSERT INTO products (category_id, title, image_url, price, discount_percent, description, features)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(category_id, title, imageUrl, price, discount_percent || 0, description, features);
+
+  const newProduct = db.prepare(`SELECT * FROM products WHERE id=?`).get(result.lastInsertRowid);
+  res.status(201).json(newProduct);
+});
+
+
+// GET site settings (public)
+app.get('/api/site-settings', (_, res) => {
+  const settings = db.prepare(`SELECT * FROM site_settings WHERE id=1`).get();
+  const carouselImages = db.prepare(`
+    SELECT * FROM images WHERE type='carousel' ORDER BY id DESC LIMIT ?
+  `).all(settings.max_carousel_items);
+  const images = db.prepare(`
+    SELECT * FROM images WHERE type!='carousel' ORDER BY id DESC LIMIT ?
+  `).all(settings.max_carousel_items);
+
+  res.json({ ...settings, carouselImages, images });
+});
+
+// GET all social links (admin - با همه اطلاعات)
+app.get('/api/admin/socials', adminAuth, (_, res) => {
+  const links = db.prepare(`
+    SELECT * FROM social_links 
+    ORDER BY display_order
+  `).all();
+  res.json(links);
+});
+
+// GET all products (admin)
+app.get('/api/admin/products', adminAuth, (_, res) => {
+  const products = db.prepare(`
+    SELECT p.*, c.title as category_title
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    ORDER BY p.created_at DESC
+  `).all();
+  res.json(products);
 });
 
 app.post(
