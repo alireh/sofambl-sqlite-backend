@@ -52,15 +52,15 @@ const storage = multer.diskStorage({
 
     // تشخیص نوع آپلود بر اساس مسیر
     if (req.path.includes('socials')) {
-      uploadPath = 'uploads/socials/';
+      uploadPath = 'data/uploads/socials/';
     } else if (req.path.includes('carousel')) {
-      uploadPath = 'uploads/carousel/';
+      uploadPath = 'data/uploads/carousel/';
     } else if (req.path.includes('articles')) {
-      uploadPath = 'uploads/articles/';
+      uploadPath = 'data/uploads/articles/';
     } else if (req.path.includes('products')) {
-      uploadPath = 'uploads/products/';
+      uploadPath = 'data/uploads/products/';
     } else if (req.path.includes('categories')) {
-      uploadPath = 'uploads/categories/';
+      uploadPath = 'data/uploads/categories/';
     }
 
     console.log('Destination path:', uploadPath); // برای دیباگ
