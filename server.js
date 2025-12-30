@@ -140,7 +140,7 @@ app.put('/api/admin/update-content', adminAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/admin/upload', adminAuth, upload.single('image'), (req, res) => {
+app.post('/api/admin/upload', upload.single('image'), adminAuth, (req, res) => {
   try {
     
   db.prepare(`
