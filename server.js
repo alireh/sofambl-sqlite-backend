@@ -156,7 +156,7 @@ app.post('/api/admin/upload', adminAuth, upload.single('image'), (req, res) => {
   );
 
   res.json({ success: true }); 
-  } catch (error) {
+  } catch (err) {
     console.error('JWT VERIFY ERROR =>', err.message);    
   }
 });
