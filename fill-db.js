@@ -2,13 +2,14 @@ import bcrypt from 'bcryptjs';
 import db from './db.js';
 
 export function fillDb() {
-  db.prepare(`
-    INSERT INTO admins (email, password)
-    VALUES (?, ?)
-  `).run(
-    'admin@test.com',
-    bcrypt.hashSync('123456', 10)
-  );
+  
+  const exists = db.prepare(`SELECT id FROM admins WHERE id=1`);
+  if (!exists) {
+    db.prepare(`
+      INSERT INTO articles (id, email, password)
+      VALUES (?, ?, ?)
+    `).run('1', 'admin@test.com', '123456');
+  };
 
   console.log('Admin created');
 
