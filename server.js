@@ -30,7 +30,8 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
-app.use('/uploads', express.static('uploads'));
+// app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('/data/uploads'));
 
 
 // 1. ابتدا این خطا را بالای فایل اضافه کنید
@@ -47,7 +48,7 @@ const storage = multer.diskStorage({
     console.log('Upload request path:', req.path); // برای دیباگ
     console.log('File fieldname:', file.fieldname); // برای دیباگ
 
-    let uploadPath = 'uploads/';
+    const uploadPath = '/data/uploads';
 
     // تشخیص نوع آپلود بر اساس مسیر
     if (req.path.includes('socials')) {
