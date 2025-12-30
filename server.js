@@ -141,6 +141,8 @@ app.put('/api/admin/update-content', adminAuth, (req, res) => {
 });
 
 app.post('/api/admin/upload', adminAuth, upload.single('image'), (req, res) => {
+  try {
+    
   db.prepare(`
     INSERT INTO images (url, title, type, price, off, is_tooman)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -153,7 +155,10 @@ app.post('/api/admin/upload', adminAuth, upload.single('image'), (req, res) => {
     req.body.is_tooman,
   );
 
-  res.json({ success: true });
+  res.json({ success: true }); 
+  } catch (error) {
+    console.error('JWT VERIFY ERROR =>', err.message);    
+  }
 });
 
 app.delete('/api/admin/image/:id', adminAuth, (req, res) => {
@@ -963,7 +968,7 @@ app.get('/api/data', (_, res) => {
 
 app.get('/api/admin/data', adminAuth, (_, res) => {
   const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
-  const images = db.prepare(`SELECT * FROM images WHERE type!='carousel'`).all();
+  const images = db.prepare(`SELECT * FROM admin/upload WHERE type!='carousel'`).all();
   const carouselImages = db.prepare(`SELECT * FROM images WHERE type='carousel'`).all();
   const articles = db.prepare(`SELECT * FROM articles ORDER BY created_at DESC`).all();
   const categories = db.prepare(`SELECT * FROM categories ORDER BY created_at DESC`).all();
