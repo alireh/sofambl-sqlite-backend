@@ -78,31 +78,4 @@ export function initDatabase() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
-
-  // seed site
-  if (!db.prepare(`SELECT 1 FROM site WHERE id=1`).get()) {
-    db.prepare(`
-      INSERT INTO site (id, about, address, email, phone)
-      VALUES (1, 'درباره ما', 'تهران', 'info@test.com', '09120000000')
-    `).run();
-  }
-
-  // seed settings
-  if (!db.prepare(`SELECT 1 FROM site_settings WHERE id=1`).get()) {
-    db.prepare(`
-      INSERT INTO site_settings (id, show_carousel, max_carousel_items, article_display_mode)
-      VALUES (1, 1, 5, 'card')
-    `).run();
-  }
-
-  // seed admin
-  if (!db.prepare(`SELECT 1 FROM admins WHERE email=?`).get('admin@example.com')) {
-    const hash = bcrypt.hashSync('admin123', 10);
-    db.prepare(`
-      INSERT INTO admins (email, password)
-      VALUES (?, ?)
-    `).run('admin@example.com', hash);
-  }
-
-  console.log('✅ Database initialized (tables checked & seeded)');
 }

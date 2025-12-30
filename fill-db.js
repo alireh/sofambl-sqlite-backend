@@ -2,16 +2,39 @@ import bcrypt from 'bcryptjs';
 import db from './db.js';
 
 export function fillDb() {
-  
-  const exists = db.prepare(`SELECT id FROM admins WHERE id=1`);
+
+  // seed site
+  if (!db.prepare(`SELECT 1 FROM site WHERE id=1`).get()) {
+    db.prepare(`
+      INSERT INTO site (id, about, address, email, phone)
+      VALUES (1, 'درباره ما', 'تهران', 'info@test.com', '09120000000')
+    `).run();
+  }
+
+  // seed settings
+  if (!db.prepare(`SELECT 1 FROM site_settings WHERE id=1`).get()) {
+    db.prepare(`
+      INSERT INTO site_settings (id, show_carousel, max_carousel_items, article_display_mode)
+      VALUES (1, 1, 5, 'card')
+    `).run();
+  }
+
+  console.log('✅ Database initialized (tables checked & seeded)');
+
+  // seed admin
+
+  const password = 'Aa12345678';
+  const hashed = bcrypt.hashSync(password, 10);
+
+
+  const exists = db.prepare(`SELECT id FROM admins WHERE id = 1`).get();
   if (!exists) {
     db.prepare(`
-      INSERT INTO articles (id, email, password)
+      INSERT INTO admins (id, email, password)
       VALUES (?, ?, ?)
-    `).run('1', 'admin@test.com', '123456');
+    `).run('1', 'farhzad@test.com', hashed);
   };
 
-  console.log('Admin created');
 
   const socialPlatforms = [
     { platform: 'telegram', url: '#', icon: '/uploads/socials/telegram.png', display_order: 1 },
@@ -31,11 +54,11 @@ export function fillDb() {
       `).run(platform.platform, platform.url, platform.icon, platform.display_order);
     }
   });
-  
+
   const carousels = [
-    { id : '1', type: 'carousel', title: '', url: '/uploads/carousel/carousel1.jpg' },
-    { id : '2', type: 'carousel', title: '', url: '/uploads/carousel/carousel2.jpg' },
-    { id : '3', type: 'carousel', title: '', url: '/uploads/carousel/carousel3.jpg' },
+    { id: '1', type: 'carousel', title: '', url: '/uploads/carousel/carousel1.jpg' },
+    { id: '2', type: 'carousel', title: '', url: '/uploads/carousel/carousel2.jpg' },
+    { id: '3', type: 'carousel', title: '', url: '/uploads/carousel/carousel3.jpg' },
   ];
 
   carousels.forEach(x => {
@@ -47,11 +70,11 @@ export function fillDb() {
       `).run(x.type, x.title, x.url, '0', '0', 'true');
     }
   });
-  
+
   const articles = [
-    { id : '1', title: 'مبل خوب' , content : 'مبلی خوب استولین چیزی که در برخورد با یک مبلمان تو  جه ما را جلب می کند، ظاهر و طراحی آن است. ظاهر یک مبل، به سبک و مدل آن بر می گردد. هر سبک طراحی و ساخت خاص خود را دارد. ظاهر و رنگ بندی مبلمان به تکامل و هماهنگی دکوراسیون داخلی کمک می کند. هنگام خرید یک مبلمان خوب و با کیفیت، علاوه بر ویژگی های ساختاری، باید به ظاهر زیبا و جذاب آن نیز توجه بسیاری کنید. متریال ساخت خوب در کنار ظاهر عالی، یک مبلمان منحصر به فرد را ایجاد می کند.', image_url:  '/uploads/articles/article1.jpg' },
-    { id : '2', title: 'مبل راحت', content : 'مبلی خوب استولین چیزی که در برخورد با یک مبلمان تو  جه ما را جلب می کند، ظاهر و طراحی آن است. ظاهر یک مبل، به سبک و مدل آن بر می گردد. هر سبک طراحی و ساخت خاص خود را دارد. ظاهر و رنگ بندی مبلمان به تکامل و هماهنگی دکوراسیون داخلی کمک می کند. هنگام خرید یک مبلمان خوب و با کیفیت، علاوه بر ویژگی های ساختاری، باید به ظاهر زیبا و جذاب آن نیز توجه بسیاری کنید. متریال ساخت خوب در کنار ظاهر عالی، یک مبلمان منحصر به فرد را ایجاد می کند.', image_url: '/uploads/articles/article2.jpg' },
-    { id : '3', title: 'مبل قشنگ', content : 'مبلی خوب استولین چیزی که در برخورد با یک مبلمان تو  جه ما را جلب می کند، ظاهر و طراحی آن است. ظاهر یک مبل، به سبک و مدل آن بر می گردد. هر سبک طراحی و ساخت خاص خود را دارد. ظاهر و رنگ بندی مبلمان به تکامل و هماهنگی دکوراسیون داخلی کمک می کند. هنگام خرید یک مبلمان خوب و با کیفیت، علاوه بر ویژگی های ساختاری، باید به ظاهر زیبا و جذاب آن نیز توجه بسیاری کنید. متریال ساخت خوب در کنار ظاهر عالی، یک مبلمان منحصر به فرد را ایجاد می کند.', image_url: '/uploads/articles/article3.jpg' },
+    { id: '1', title: 'مبل خوب', content: 'مبلی خوب استولین چیزی که در برخورد با یک مبلمان تو  جه ما را جلب می کند، ظاهر و طراحی آن است. ظاهر یک مبل، به سبک و مدل آن بر می گردد. هر سبک طراحی و ساخت خاص خود را دارد. ظاهر و رنگ بندی مبلمان به تکامل و هماهنگی دکوراسیون داخلی کمک می کند. هنگام خرید یک مبلمان خوب و با کیفیت، علاوه بر ویژگی های ساختاری، باید به ظاهر زیبا و جذاب آن نیز توجه بسیاری کنید. متریال ساخت خوب در کنار ظاهر عالی، یک مبلمان منحصر به فرد را ایجاد می کند.', image_url: '/uploads/articles/article1.jpg' },
+    { id: '2', title: 'مبل راحت', content: 'مبلی خوب استولین چیزی که در برخورد با یک مبلمان تو  جه ما را جلب می کند، ظاهر و طراحی آن است. ظاهر یک مبل، به سبک و مدل آن بر می گردد. هر سبک طراحی و ساخت خاص خود را دارد. ظاهر و رنگ بندی مبلمان به تکامل و هماهنگی دکوراسیون داخلی کمک می کند. هنگام خرید یک مبلمان خوب و با کیفیت، علاوه بر ویژگی های ساختاری، باید به ظاهر زیبا و جذاب آن نیز توجه بسیاری کنید. متریال ساخت خوب در کنار ظاهر عالی، یک مبلمان منحصر به فرد را ایجاد می کند.', image_url: '/uploads/articles/article2.jpg' },
+    { id: '3', title: 'مبل قشنگ', content: 'مبلی خوب استولین چیزی که در برخورد با یک مبلمان تو  جه ما را جلب می کند، ظاهر و طراحی آن است. ظاهر یک مبل، به سبک و مدل آن بر می گردد. هر سبک طراحی و ساخت خاص خود را دارد. ظاهر و رنگ بندی مبلمان به تکامل و هماهنگی دکوراسیون داخلی کمک می کند. هنگام خرید یک مبلمان خوب و با کیفیت، علاوه بر ویژگی های ساختاری، باید به ظاهر زیبا و جذاب آن نیز توجه بسیاری کنید. متریال ساخت خوب در کنار ظاهر عالی، یک مبلمان منحصر به فرد را ایجاد می کند.', image_url: '/uploads/articles/article3.jpg' },
   ];
 
   articles.forEach(x => {
@@ -60,14 +83,14 @@ export function fillDb() {
       db.prepare(`
         INSERT INTO articles (title, content, image_url)
         VALUES (?, ?, ?)
-      `).run(x.title, x.content,  x.image_url);
+      `).run(x.title, x.content, x.image_url);
     }
   });
-  
+
   const categories = [
-    { id : '1', title: 'مبل خوب' , description : 'چوب', image_url:  '/uploads/categories/category1.jpg' },
-    { id : '2', title: 'مبل راحت', description : 'چستر', image_url: '/uploads/categories/category2.jpg' },
-    { id : '3', title: 'مبل قشنگ', description : 'تخت', image_url:  '/uploads/categories/category3.jpg' },
+    { id: '1', title: 'مبل خوب', description: 'چوب', image_url: '/uploads/categories/category1.jpg' },
+    { id: '2', title: 'مبل راحت', description: 'چستر', image_url: '/uploads/categories/category2.jpg' },
+    { id: '3', title: 'مبل قشنگ', description: 'تخت', image_url: '/uploads/categories/category3.jpg' },
   ];
 
   categories.forEach(x => {
@@ -76,17 +99,17 @@ export function fillDb() {
       db.prepare(`
         INSERT INTO categories (title, description, image_url)
         VALUES (?, ?, ?)
-      `).run(x.title, x.description,  x.image_url);
+      `).run(x.title, x.description, x.image_url);
     }
   });
-  
+
   const products = [
-    { id : '1', category_id : '1', title: 'مبل خوب' ,features:'ویژگی 11',is_active:'true',discount_percent: '0',price:'1200000', description : 'چوب', image_url:  '/uploads/products/products11.jpg' },
-    { id : '2', category_id : '1', title: 'مبل راحت',features:'ویژگی 12',is_active:'true',discount_percent: '0',price:'1200000', description : 'چستر', image_url: '/uploads/products/products12.jpg' },
-    { id : '3', category_id : '1', title: 'مبل قشنگ',features:'ویژگی 13',is_active:'true',discount_percent: '0',price:'1200000', description : 'تخت', image_url:  '/uploads/products/products13.jpg' },
-    { id : '4', category_id : '2', title: 'مبل خوب' ,features:'ویژگی 21',is_active:'true',discount_percent: '0',price:'1200000', description : 'چوب', image_url:  '/uploads/products/products21.jpg' },
-    { id : '5', category_id : '2', title: 'مبل راحت',features:'ویژگی 22',is_active:'true',discount_percent: '0',price:'1200000', description : 'چستر', image_url: '/uploads/products/products22.jpg' },
-    { id : '6', category_id : '3', title: 'مبل قشنگ',features:'ویژگی 23',is_active:'true',discount_percent: '0',price:'1200000', description : 'تخت', image_url:  '/uploads/products/products23.jpg' },
+    { id: '1', category_id: '1', title: 'مبل خوب', features: 'ویژگی 11', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چوب', image_url: '/uploads/products/products11.jpg' },
+    { id: '2', category_id: '1', title: 'مبل راحت', features: 'ویژگی 12', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چستر', image_url: '/uploads/products/products12.jpg' },
+    { id: '3', category_id: '1', title: 'مبل قشنگ', features: 'ویژگی 13', is_active: 'true', discount_percent: '0', price: '1200000', description: 'تخت', image_url: '/uploads/products/products13.jpg' },
+    { id: '4', category_id: '2', title: 'مبل خوب', features: 'ویژگی 21', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چوب', image_url: '/uploads/products/products21.jpg' },
+    { id: '5', category_id: '2', title: 'مبل راحت', features: 'ویژگی 22', is_active: 'true', discount_percent: '0', price: '1200000', description: 'چستر', image_url: '/uploads/products/products22.jpg' },
+    { id: '6', category_id: '3', title: 'مبل قشنگ', features: 'ویژگی 23', is_active: 'true', discount_percent: '0', price: '1200000', description: 'تخت', image_url: '/uploads/products/products23.jpg' },
   ];
 
   products.forEach(x => {
@@ -95,7 +118,7 @@ export function fillDb() {
       db.prepare(`
         INSERT INTO products (category_id, title, features,is_active,discount_percent, price, description, image_url)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(x.category_id, x.title, x.features,x.is_active,x.discount_percent, x.price, x.description, x.image_url);
+      `).run(x.category_id, x.title, x.features, x.is_active, x.discount_percent, x.price, x.description, x.image_url);
     }
   });
 }

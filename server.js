@@ -29,10 +29,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* ================== STATIC ================== */
-const UPLOAD_ROOT = '/data/uploads';
+const UPLOAD_ROOT = path.join(__dirname, 'uploads');
+
 if (!fs.existsSync(UPLOAD_ROOT)) {
   fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
 }
+
 app.use('/uploads', express.static(UPLOAD_ROOT));
 
 /* ================== MULTER ================== */
@@ -69,6 +71,37 @@ const upload = multer({
     const ok = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
     cb(ok.includes(file.mimetype) ? null : new Error('Invalid file type'), true);
   }
+});
+
+app.get("/api/categories", (_, res) => {
+  const categories = db.prepare(`
+    SELECT c.*, 
+           COUNT(p.id) as product_count
+    FROM categories c
+    LEFT JOIN products p ON c.id = p.category_id AND p.is_active = 1
+    GROUP BY c.id
+    ORDER BY c.created_at DESC
+  `).all();
+  res.json(categories);
+});
+
+app.get("/api/data", (_, res) => {
+  const site = db.prepare(`SELECT * FROM site WHERE id=1`).get();
+  const images = db.prepare(`SELECT * FROM images WHERE type!='carousel'`).all();
+  const settings = db.prepare(`SELECT * FROM site_settings WHERE id=1`).get();
+  const carouselImages = db.prepare(`
+    SELECT * FROM images WHERE type='carousel' ORDER BY id DESC LIMIT ?
+  `).all(settings.max_carousel_items);
+  const socialLinks = db.prepare(`
+    SELECT * FROM social_links  WHERE is_active = 1 ORDER BY display_order
+  `).all();
+  res.json({
+    ...site,
+    images,
+    carouselImages,
+    settings,
+    socialLinks
+  });
 });
 
 /* ================== HEALTH ================== */
@@ -134,6 +167,77 @@ app.post(
     );
   }
 );
+// PUT update article with optional image update
+app.put('/api/admin/articles/:id', adminAuth, upload.single('image'), (req, res) => {
+  const { title, content, removeImage } = req.body;
+  const articleId = req.params.id;
+
+  // Check if article exists
+  const existing = db.prepare(`
+    SELECT * FROM articles WHERE id=?
+  `).get(articleId);
+
+  if (!existing) {
+    return res.status(404).json({ error: 'Article not found' });
+  }
+
+  let imageUrl = existing.image_url;
+
+  // اگر فایل جدید آپلود شده
+  if (req.file) {
+    imageUrl = `/uploads/articles/${req.file.filename}`;
+  }
+
+  // اگر کاربر بخواهد تصویر را حذف کند
+  if (removeImage === 'true') {
+    imageUrl = null;
+  }
+
+  db.prepare(`
+    UPDATE articles 
+    SET 
+      title = COALESCE(?, title),
+      content = COALESCE(?, content),
+      image_url = ?,
+      updated_at = datetime('now')
+    WHERE id=?
+  `).run(title, content, imageUrl, articleId);
+
+  const updatedArticle = db.prepare(`
+    SELECT * FROM articles WHERE id=?
+  `).get(articleId);
+
+  res.json(updatedArticle);
+});
+
+// DELETE article (also delete the image file if exists)
+app.delete('/api/admin/articles/:id', adminAuth, (req, res) => {
+  const articleId = req.params.id;
+
+  // Check if article exists
+  const existing = db.prepare(`
+    SELECT * FROM articles WHERE id=?
+  `).get(articleId);
+
+  if (!existing) {
+    return res.status(404).json({ error: 'Article not found' });
+  }
+
+  // حذف فایل تصویر از سیستم اگر وجود دارد
+  if (existing.image_url) {
+    const imagePath = existing.image_url.replace('/uploads/articles/', 'uploads/articles/');
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    }
+  }
+
+
+  db.prepare(`
+    DELETE FROM articles WHERE id=?
+  `).run(articleId);
+
+  res.json({ success: true, message: 'Article deleted successfully' });
+});
 
 /* ================== PRODUCTS ================== */
 app.post(
