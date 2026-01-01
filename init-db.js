@@ -2,6 +2,17 @@ import db from './db.js';
 import bcrypt from 'bcryptjs';
 
 export function initDatabase() {
+  // در بخش createTables، بعد از جدول social_links این را اضافه کنید
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_read BOOLEAN DEFAULT 0
+    )
+  `);
   db.exec(`
     CREATE TABLE IF NOT EXISTS articles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

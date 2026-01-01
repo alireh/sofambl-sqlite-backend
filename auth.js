@@ -13,7 +13,6 @@ export const adminAuth1 = (req, res, next) => {
   }
 };
 export const adminAuth = (req, res, next) => {
-  console.log('AUTH HEADER =>', req.headers.authorization);
 
   const header = req.headers.authorization;
   if (!header) return res.status(401).json({ error: 'No token' });
