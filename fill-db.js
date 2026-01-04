@@ -39,8 +39,8 @@ export async function fillDb() {
     const adminExists = await db.get(`SELECT id FROM admins WHERE id = 1`);
     if (!adminExists) {
       await db.run(
-        `INSERT INTO admins (id, email, password) 
-                 VALUES (1, ?, ?)`,
+        `INSERT INTO admins (id, name, email, password) 
+                 VALUES (1, 'admin', ?, ?)`,
         ['farhzad@test.com', hashed]
       );
       console.log('✅ ادمین ایجاد شد - ایمیل: farhzad@test.com, رمز عبور: Aa12345678');
