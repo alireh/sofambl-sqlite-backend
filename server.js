@@ -114,7 +114,7 @@ app.get("/api/data", async (_, res) => {
         console.log('🔍 مرحله 1: دریافت اطلاعات سایت');
         let site;
         try {
-            const [siteResult] = await db.execute('SELECT * FROM site WHERE id = ?', [1]);
+            const [siteResult] = await db.all('SELECT * FROM site WHERE id = ?', [1]);
             site = siteResult[0];
             console.log('✅ اطلاعات سایت:', site ? 'موفق' : 'سایت یافت نشد');
         } catch (siteError) {
@@ -126,7 +126,7 @@ app.get("/api/data", async (_, res) => {
         console.log('🔍 مرحله 2: دریافت تصاویر غیرکاروسل');
         let images = [];
         try {
-            const [imagesResult] = await db.execute('SELECT * FROM images WHERE type != ?', ['carousel']);
+            const [imagesResult] = await db.all('SELECT * FROM images WHERE type != ?', ['carousel']);
             images = imagesResult;
             console.log(`✅ ${images.length} تصویر غیرکاروسل دریافت شد`);
         } catch (imagesError) {
@@ -138,7 +138,7 @@ app.get("/api/data", async (_, res) => {
         let settings;
         let maxCarouselItems = 5;
         try {
-            const [settingsResult] = await db.execute('SELECT * FROM site_settings WHERE id = ?', [1]);
+            const [settingsResult] = await db.all('SELECT * FROM site_settings WHERE id = ?', [1]);
             settings = settingsResult[0];
 
             if (settings && settings.max_carousel_items) {
@@ -159,7 +159,7 @@ app.get("/api/data", async (_, res) => {
         let carouselImages = [];
         try {
             console.log(`📝 اجرای کوئری: SELECT * FROM images WHERE type = 'carousel' ORDER BY id DESC LIMIT ${maxCarouselItems}`);
-            const [carouselResult] = await db.execute(
+            const [carouselResult] = await db.all(
                 'SELECT * FROM images WHERE type = ? ORDER BY id DESC LIMIT ?',
                 ['carousel', maxCarouselItems]
             );
@@ -176,26 +176,26 @@ app.get("/api/data", async (_, res) => {
         let socialLinks = [];
         try {
             // اول ببینیم جدول وجود دارد
-            const [tables] = await db.execute("SHOW TABLES LIKE 'social_links'");
+            const [tables] = await db.all("SHOW TABLES LIKE 'social_links'");
             if (tables.length === 0) {
                 console.log('⚠️ جدول social_links وجود ندارد');
             } else {
                 // ساختار جدول را بررسی کنیم
-                const [columns] = await db.execute("DESCRIBE social_links");
+                const [columns] = await db.all("DESCRIBE social_links");
                 console.log('📋 ستون‌های social_links:');
                 columns.forEach(col => {
                     console.log(`  - ${col.Field} (${col.Type})`);
                 });
 
                 // ابتدا بدون شرط تست می‌کنیم
-                const [allSocial] = await db.execute('SELECT * FROM social_links');
+                const [allSocial] = await db.all('SELECT * FROM social_links');
                 console.log(`📊 کل رکوردهای social_links: ${allSocial.length}`);
 
                 // حالا با شرط
                 console.log('📝 تست کوئری با شرط is_active...');
 
                 // راه حل 1: استفاده از 1 به جای true
-                const [socialResult] = await db.execute(
+                const [socialResult] = await db.all(
                     'SELECT * FROM social_links WHERE is_active = ? ORDER BY display_order',
                     [1] // این مهم است - در MySQL از 1 استفاده کنید
                 );
@@ -210,7 +210,7 @@ app.get("/api/data", async (_, res) => {
             // راه حل جایگزین: بدون پارامتر
             try {
                 console.log('🔄 تلاش با کوئری بدون پارامتر...');
-                const [alternativeResult] = await db.execute(
+                const [alternativeResult] = await db.all(
                     "SELECT * FROM social_links WHERE is_active = 1 ORDER BY display_order"
                 );
                 socialLinks = alternativeResult;
@@ -306,7 +306,7 @@ app.post('/api/contact', async (req, res) => {
             return res.status(400).json({ success: false, error: 'متن پیام الزامی است' });
         }
 
-        const [recentMessages] = await db.execute(
+        const [recentMessages] = await db.all(
             `SELECT COUNT(*) as count FROM contact_messages WHERE email = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
             [email.trim()]
         );

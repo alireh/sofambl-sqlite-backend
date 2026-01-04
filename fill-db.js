@@ -41,9 +41,9 @@ export async function fillDb() {
       await db.run(
         `INSERT INTO admins (id, name, email, password) 
                  VALUES (1, 'admin', ?, ?)`,
-        ['farhzad@test.com', hashed]
+        ['farahzad@test.com', hashed]
       );
-      console.log('✅ ادمین ایجاد شد - ایمیل: farhzad@test.com, رمز عبور: Aa12345678');
+      console.log('✅ ادمین ایجاد شد - ایمیل: farahzad@test.com, رمز عبور: Aa12345678');
     }
 
     // seed social platforms
