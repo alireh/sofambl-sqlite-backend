@@ -50,6 +50,16 @@ db.serialize(() => {
     )
   `);
 
+  db.run(`
+  CREATE TABLE IF NOT EXISTS best_sellers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    image TEXT NOT NULL,
+    rating REAL NOT NULL,
+    price INTEGER NOT NULL
+  );
+`);
+
   // ================= HERO SEED =================
   db.get("SELECT COUNT(*) as count FROM hero_settings", (err, row) => {
     if (!row || row.count === 0) {
@@ -116,6 +126,44 @@ db.serialize(() => {
     }
   });
 
+  // ================= Best Sellers =================
+
+  db.get("SELECT COUNT(*) as count FROM best_sellers", (err, row) => {
+    if (!row || row.count === 0) {
+      console.log("🌱 Seeding best_sellers...");
+
+      const insert = db.prepare(`
+        INSERT INTO best_sellers
+        (title, image, rating, price)
+        VALUES (?, ?, ?, ?)
+      `);
+
+      const seedData = [
+        ["مبل راحتی شیک",
+          "/uploads/default-desktop.jpg",
+          4.5,
+          3500000],
+        [
+          "میز ناهارخوری لوکس",
+          "/uploads/best_sellers2.webp",
+          4.8,
+          5200000],
+        ["کنسول مدرن",
+          "/uploads/best_sellers3.webp",
+          4.3,
+          2800000],
+        ["اکسسوری دکوری",
+          "/uploads/best_sellers4.webp",
+          4.6,
+          850000],
+      ];
+
+      seedData.forEach((r) => insert.run(r));
+      insert.finalize();
+
+      console.log("✅ best_sellers seeded");
+    }
+  });
 
   // ✅ seed منو
   db.get("SELECT COUNT(*) as count FROM menu_items", (err, row) => {

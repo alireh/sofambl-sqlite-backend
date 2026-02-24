@@ -394,6 +394,94 @@ app.delete("/api/sub-collections/:id", authAdmin, (req, res) => {
     }
   );
 });
+// ================= Best Sellers =================
+app.get("/api/best-sellers", (req, res) => {
+  db.all(
+    "SELECT * FROM best_sellers ORDER BY id DESC LIMIT 4",
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+app.post(
+  "/api/best-sellers",
+  authAdmin,
+  upload.single("image"),
+  (req, res) => {
+    const { title, rating, price } = req.body;
+
+    db.get("SELECT COUNT(*) as count FROM best_sellers", (err, row) => {
+      if (row.count >= 4) {
+        return res.status(400).json({ error: "حداکثر ۴ محصول مجاز است" });
+      }
+
+      const image = req.file ? `/uploads/${req.file.filename}` : "";
+
+      db.run(
+        "INSERT INTO best_sellers (title, image, rating, price) VALUES (?, ?, ?, ?)",
+        [title, image, rating, price],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+
+          db.get(
+            "SELECT * FROM best_sellers WHERE id = ?",
+            [this.lastID],
+            (err, row) => {
+              res.json(row);
+            }
+          );
+        }
+      );
+    });
+  }
+);
+app.put(
+  "/api/best-sellers/:id",
+  authAdmin,
+  upload.single("image"),
+  (req, res) => {
+    const { id } = req.params;
+    const { title, rating, price } = req.body;
+
+    db.get("SELECT * FROM best_sellers WHERE id = ?", [id], (err, row) => {
+      if (!row) return res.status(404).json({ error: "Not found" });
+
+      let image = row.image;
+
+      if (req.file) {
+        image = `/uploads/${req.file.filename}`;
+      }
+
+      db.run(
+        `UPDATE best_sellers
+         SET title=?, image=?, rating=?, price=?
+         WHERE id=?`,
+        [title, image, rating, price, id],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+
+          db.get(
+            "SELECT * FROM best_sellers WHERE id=?",
+            [id],
+            (err, updated) => res.json(updated)
+          );
+        }
+      );
+    });
+  }
+);
+app.delete("/api/best-sellers/:id", authAdmin, (req, res) => {
+  db.run(
+    "DELETE FROM best_sellers WHERE id=?",
+    [req.params.id],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    }
+  );
+});
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
