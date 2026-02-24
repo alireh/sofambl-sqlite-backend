@@ -483,6 +483,63 @@ app.delete("/api/best-sellers/:id", authAdmin, (req, res) => {
   );
 });
 
+
+
+// ================= Common Questions =================
+app.get("/api/common_questions", (req, res) => {
+  db.all(
+    "SELECT * FROM common_questions ORDER BY id DESC",
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+
+app.post("/api/common_questions", authAdmin, (req, res) => {
+  const { question, answer } = req.body;
+
+  const result = db.prepare(`
+    INSERT INTO common_questions (question, answer)
+    VALUES (?, ?)
+  `).run(question, answer);
+
+  const newItem = db.prepare(`
+    SELECT * FROM common_questions WHERE id = ?
+  `).get(result.lastInsertRowid);
+
+  res.json(newItem);
+});
+
+
+app.put("/api/common_questions/:id", authAdmin, (req, res) => {
+  const { question, answer } = req.body;
+  const { id } = req.params;
+
+  db.prepare(`
+    UPDATE common_questions
+    SET question = ?, answer = ?
+    WHERE id = ?
+  `).run(question, answer, id);
+
+  const updated = db.prepare(`
+    SELECT * FROM common_questions WHERE id = ?
+  `).get(id);
+
+  res.json(updated);
+});
+
+
+app.delete("/api/common_questions/:id", authAdmin, (req, res) => {
+  db.prepare(`
+    DELETE FROM common_questions WHERE id = ?
+  `).run(req.params.id);
+
+  res.json({ success: true });
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
