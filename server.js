@@ -832,6 +832,24 @@ app.put("/api/footer", (req, res) => {
     }
   );
 });
+// ================= Description =================
+
+app.put("/api/description", authAdmin, (req, res) => {
+  const { question, answer } = req.body;
+  const { id } = req.params;
+
+  db.prepare(`
+    UPDATE description
+    SET question = ?, answer = ?
+    WHERE id = 1
+  `).run(question, answer);
+
+  const updated = db.prepare(`
+    SELECT * FROM description WHERE id = 1
+  `).get(id);
+
+  res.json(updated);
+});
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
