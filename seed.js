@@ -86,7 +86,7 @@ db.serialize(() => {
 `);
 
   db.run(`
-    CREATE TABLE footer_settings (
+   CREATE TABLE IF NOT EXISTS footer_settings  (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
 
       about_text TEXT,
@@ -422,7 +422,7 @@ db.serialize(() => {
         'پنج‌شنبه: ۹ صبح تا ۶ عصر',
         'جمعه: تعطیل',
         'تمامی حقوق مادی و معنوی این سایت متعلق به مبل فرحزاد می‌باشد.',
-        '[{"title":"خانه","url":"#"},{"title":"محصولات","url":"#"}]',
+        '[{"title":"خانه","url":"#"},{"title":"محصولات","url":"#"},{"title":"سرویس خواب","url":"#"},{"title":"تماس با ما خواب","url":"#"}]',
         '[
           {"icon":"/uploads/telegram.png","url":"#"},
           {"icon":"/uploads/instagram.png","url":"#"},
