@@ -546,7 +546,7 @@ app.delete("/api/common_questions/:id", authAdmin, (req, res) => {
 // GET all articles (public - با محدودیت)
 app.get("/api/articles", (req, res) => {
   const take = Number(req.query.take) || 4;
-  
+
   db.all(
     `SELECT * FROM articles 
      WHERE is_active = 1 
@@ -598,9 +598,9 @@ app.post("/api/articles", authAdmin, upload.fields([
      (title, summary, full_content, image, desktop_image, mobile_image, created_at, author, read_time, category)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [title, summary, full_content || "", image, desktop_image, mobile_image, created_at, author, read_time, category],
-    function(err) {
+    function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      
+
       db.get(
         "SELECT * FROM articles WHERE id = ?",
         [this.lastID],
@@ -673,9 +673,9 @@ app.put("/api/articles/:id", authAdmin, upload.fields([
            read_time = ?, category = ?
        WHERE id = ?`,
       [title, summary, full_content || "", image, desktop_image, mobile_image, author, read_time, category, id],
-      function(err) {
+      function (err) {
         if (err) return res.status(500).json({ error: err.message });
-        
+
         db.get(
           "SELECT * FROM articles WHERE id = ?",
           [id],
@@ -708,7 +708,7 @@ app.delete("/api/articles/:id", authAdmin, (req, res) => {
     }
 
     // حذف از دیتابیس
-    db.run("DELETE FROM articles WHERE id = ?", [id], function(err) {
+    db.run("DELETE FROM articles WHERE id = ?", [id], function (err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ success: true });
     });
@@ -833,16 +833,25 @@ app.put("/api/footer", (req, res) => {
   );
 });
 // ================= Description =================
+app.get("/api/description", (req, res) => {
+  db.get("SELECT * FROM description WHERE id=1", (err, row) => {
+    if (err) return res.status(500).json(err);
+
+    if (!row) return res.json(null);
+
+    res.json(row);
+  });
+});
 
 app.put("/api/description", authAdmin, (req, res) => {
-  const { question, answer } = req.body;
+  const { title, content } = req.body;
   const { id } = req.params;
 
   db.prepare(`
     UPDATE description
-    SET question = ?, answer = ?
+    SET title = ?, content = ?
     WHERE id = 1
-  `).run(question, answer);
+  `).run(title, content);
 
   const updated = db.prepare(`
     SELECT * FROM description WHERE id = 1
