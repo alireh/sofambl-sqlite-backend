@@ -85,6 +85,28 @@ db.serialize(() => {
     )
 `);
 
+  db.run(`
+    CREATE TABLE footer_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      about_text TEXT,
+
+      address TEXT,
+      phone TEXT,
+      mobile TEXT,
+      email TEXT,
+
+      work_sat_wed TEXT,
+      work_thu TEXT,
+      work_fri TEXT,
+
+      copyright TEXT,
+
+      useful_links TEXT,      -- JSON
+      socials TEXT            -- JSON
+    );
+  `);
+
   // ================= HERO SEED =================
   db.get("SELECT COUNT(*) as count FROM hero_settings", (err, row) => {
     if (!row || row.count === 0) {
@@ -263,7 +285,7 @@ db.serialize(() => {
       seedData.forEach((r) => insert.run(r));
       insert.finalize();
 
-      console.log("✅ common_questions seeded");
+      console.log("✅ articles seeded");
     }
   });
 
@@ -367,7 +389,50 @@ db.serialize(() => {
       seedData.forEach((r) => insert.run(r));
       insert.finalize();
 
-      console.log("✅ common_questions seeded");
+      console.log("✅ articles seeded");
+    }
+  });
+
+  db.get("SELECT COUNT(*) as count FROM footer_settings", (err, row) => {
+    if (!row || row.count === 0) {
+      console.log("🌱 Seeding footer_settings...");
+
+      const insert = db.run(`
+        INSERT INTO footer_settings (
+        id,
+        about_text,
+        address,
+        phone,
+        mobile,
+        email,
+        work_sat_wed,
+        work_thu,
+        work_fri,
+        copyright,
+        useful_links,
+        socials
+      ) VALUES (
+        1,
+        'مبل فرحزاد با بیش از ۱۰ سال سابقه درخشان در زمینه تولید و عرضه مبلمان منزل و اداری',
+        'تهران، باغستان مبل فرخزاد',
+        '۰۲۱-۲۶۷۵۵۰۰۲',
+        '۰۹۱۲-۱۲۷۹۲۷۱',
+        'info@mobleshop.ir',
+        'شنبه تا چهارشنبه: ۹ صبح تا ۸ شب',
+        'پنج‌شنبه: ۹ صبح تا ۶ عصر',
+        'جمعه: تعطیل',
+        'تمامی حقوق مادی و معنوی این سایت متعلق به مبل فرحزاد می‌باشد.',
+        '[{"title":"خانه","url":"#"},{"title":"محصولات","url":"#"}]',
+        '[
+          {"icon":"/icons/telegram.png","url":"#"},
+          {"icon":"/icons/instagram.png","url":"#"},
+          {"icon":"/icons/facebook.png","url":"#"},
+          {"icon":"/icons/twitter.png","url":"#"}
+        ]'
+      );
+      `);
+
+      console.log("✅ footer_settings seeded");
     }
   });
 });

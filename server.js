@@ -543,7 +543,6 @@ app.delete("/api/common_questions/:id", authAdmin, (req, res) => {
 });
 
 // ================= Articles =================
-// ================= Articles =================
 // GET all articles (public - با محدودیت)
 app.get("/api/articles", (req, res) => {
   const take = Number(req.query.take) || 4;
@@ -714,6 +713,124 @@ app.delete("/api/articles/:id", authAdmin, (req, res) => {
       res.json({ success: true });
     });
   });
+});
+
+// ================= Footer =================
+app.get("/api/footer", (req, res) => {
+  db.get("SELECT * FROM footer_settings WHERE id=1", (err, row) => {
+    if (err) return res.status(500).json(err);
+
+    if (!row) return res.json(null);
+
+    row.useful_links = row.useful_links
+      ? JSON.parse(row.useful_links)
+      : [];
+
+    row.socials = row.socials
+      ? JSON.parse(row.socials)
+      : [];
+
+    res.json(row);
+  });
+});
+
+app.put("/api/footer", (req, res) => {
+  const {
+    about_text,
+    address,
+    phone,
+    mobile,
+    email,
+    work_sat_wed,
+    work_thu,
+    work_fri,
+    copyright,
+    useful_links,
+    socials,
+  } = req.body;
+
+  db.run(
+    `UPDATE footer_settings SET
+      about_text=?,
+      address=?,
+      phone=?,
+      mobile=?,
+      email=?,
+      work_sat_wed=?,
+      work_thu=?,
+      work_fri=?,
+      copyright=?,
+      useful_links=?,
+      socials=?
+     WHERE id=1`,
+    [
+      about_text,
+      address,
+      phone,
+      mobile,
+      email,
+      work_sat_wed,
+      work_thu,
+      work_fri,
+      copyright,
+      JSON.stringify(useful_links || []),
+      JSON.stringify(socials || []),
+    ],
+    function (err) {
+      if (err) return res.status(500).json(err);
+      res.json({ success: true });
+    }
+  );
+});
+
+
+app.put("/api/footer", (req, res) => {
+  const {
+    about_text,
+    address,
+    phone,
+    mobile,
+    email,
+    work_sat_wed,
+    work_thu,
+    work_fri,
+    copyright,
+    useful_links,
+    socials,
+  } = req.body;
+
+  db.run(
+    `UPDATE footer_settings SET
+      about_text=?,
+      address=?,
+      phone=?,
+      mobile=?,
+      email=?,
+      work_sat_wed=?,
+      work_thu=?,
+      work_fri=?,
+      copyright=?,
+      useful_links=?,
+      socials=?
+     WHERE id=1`,
+    [
+      about_text,
+      address,
+      phone,
+      mobile,
+      email,
+      work_sat_wed,
+      work_thu,
+      work_fri,
+      copyright,
+      JSON.stringify(useful_links || []),
+      JSON.stringify(socials || []),
+    ],
+    function (err) {
+      if (err) return res.status(500).json(err);
+      res.json({ success: true });
+    }
+  );
 });
 
 app.listen(PORT, () => {
