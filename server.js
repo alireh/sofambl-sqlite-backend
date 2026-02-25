@@ -16,6 +16,8 @@ const fs = require("fs");
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+app.use(express.urlencoded({ extended: true }));
+
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
@@ -538,6 +540,180 @@ app.delete("/api/common_questions/:id", authAdmin, (req, res) => {
   `).run(req.params.id);
 
   res.json({ success: true });
+});
+
+// ================= Articles =================
+// ================= Articles =================
+// GET all articles (public - با محدودیت)
+app.get("/api/articles", (req, res) => {
+  const take = Number(req.query.take) || 4;
+  
+  db.all(
+    `SELECT * FROM articles 
+     WHERE is_active = 1 
+     ORDER BY datetime(created_at) DESC 
+     LIMIT ?`,
+    [take],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+// GET all articles for admin (بدون محدودیت)
+app.get("/api/articles/admin", authAdmin, (req, res) => {
+  db.all(
+    "SELECT * FROM articles ORDER BY datetime(created_at) DESC",
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+// POST new article
+app.post("/api/articles", authAdmin, upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "desktop", maxCount: 1 },
+  { name: "mobile", maxCount: 1 }
+]), (req, res) => {
+  const {
+    title,
+    summary,
+    full_content,
+    author,
+    read_time,
+    category
+  } = req.body;
+
+  const image = req.files?.image ? `/uploads/${req.files.image[0].filename}` : null;
+  const desktop_image = req.files?.desktop ? `/uploads/${req.files.desktop[0].filename}` : null;
+  const mobile_image = req.files?.mobile ? `/uploads/${req.files.mobile[0].filename}` : null;
+
+  const created_at = new Date().toLocaleDateString("fa-IR");
+
+  db.run(
+    `INSERT INTO articles 
+     (title, summary, full_content, image, desktop_image, mobile_image, created_at, author, read_time, category)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [title, summary, full_content || "", image, desktop_image, mobile_image, created_at, author, read_time, category],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      db.get(
+        "SELECT * FROM articles WHERE id = ?",
+        [this.lastID],
+        (err, row) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json(row);
+        }
+      );
+    }
+  );
+});
+
+// PUT update article
+app.put("/api/articles/:id", authAdmin, upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "desktop", maxCount: 1 },
+  { name: "mobile", maxCount: 1 }
+]), (req, res) => {
+  const { id } = req.params;
+  const {
+    title,
+    summary,
+    full_content,
+    author,
+    read_time,
+    category
+  } = req.body;
+
+  // اول مقاله موجود را دریافت کن
+  db.get("SELECT * FROM articles WHERE id = ?", [id], (err, article) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!article) return res.status(404).json({ error: "Article not found" });
+
+    // تصاویر جدید یا قبلی
+    let image = article.image;
+    let desktop_image = article.desktop_image;
+    let mobile_image = article.mobile_image;
+
+    // اگر تصویر جدید آپلود شده
+    if (req.files?.image) {
+      image = `/uploads/${req.files.image[0].filename}`;
+      // حذف تصویر قبلی
+      if (article.image) {
+        const oldPath = path.join(__dirname, article.image);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+    }
+
+    if (req.files?.desktop) {
+      desktop_image = `/uploads/${req.files.desktop[0].filename}`;
+      if (article.desktop_image) {
+        const oldPath = path.join(__dirname, article.desktop_image);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+    }
+
+    if (req.files?.mobile) {
+      mobile_image = `/uploads/${req.files.mobile[0].filename}`;
+      if (article.mobile_image) {
+        const oldPath = path.join(__dirname, article.mobile_image);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+    }
+
+    // بروزرسانی مقاله
+    db.run(
+      `UPDATE articles 
+       SET title = ?, summary = ?, full_content = ?, image = ?, 
+           desktop_image = ?, mobile_image = ?, author = ?, 
+           read_time = ?, category = ?
+       WHERE id = ?`,
+      [title, summary, full_content || "", image, desktop_image, mobile_image, author, read_time, category, id],
+      function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        db.get(
+          "SELECT * FROM articles WHERE id = ?",
+          [id],
+          (err, updated) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(updated);
+          }
+        );
+      }
+    );
+  });
+});
+
+// DELETE article
+app.delete("/api/articles/:id", authAdmin, (req, res) => {
+  const { id } = req.params;
+
+  // اول تصاویر را دریافت و حذف کن
+  db.get("SELECT image, desktop_image, mobile_image FROM articles WHERE id = ?", [id], (err, article) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    // حذف فایل‌ها
+    if (article) {
+      [article.image, article.desktop_image, article.mobile_image].forEach(imgPath => {
+        if (imgPath) {
+          const fullPath = path.join(__dirname, imgPath);
+          if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+        }
+      });
+    }
+
+    // حذف از دیتابیس
+    db.run("DELETE FROM articles WHERE id = ?", [id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    });
+  });
 });
 
 app.listen(PORT, () => {
