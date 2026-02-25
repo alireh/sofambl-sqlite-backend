@@ -424,10 +424,10 @@ db.serialize(() => {
         'تمامی حقوق مادی و معنوی این سایت متعلق به مبل فرحزاد می‌باشد.',
         '[{"title":"خانه","url":"#"},{"title":"محصولات","url":"#"}]',
         '[
-          {"icon":"/icons/telegram.png","url":"#"},
-          {"icon":"/icons/instagram.png","url":"#"},
-          {"icon":"/icons/facebook.png","url":"#"},
-          {"icon":"/icons/twitter.png","url":"#"}
+          {"icon":"/uploads/telegram.png","url":"#"},
+          {"icon":"/uploads/instagram.png","url":"#"},
+          {"icon":"/uploads/aparat.png","url":"#"},
+          {"icon":"/uploads/whatsapp.png","url":"#"}
         ]'
       );
       `);
