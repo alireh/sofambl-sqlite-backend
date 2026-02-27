@@ -26,6 +26,48 @@ const storage = multer.diskStorage({
   },
 });
 
+const getFileExtension = function (filename) {
+  const parts = filename.split(".");
+  return parts.pop();
+};
+
+const videoDir = path.join(__dirname, "uploads", "video");
+if (!fs.existsSync(videoDir)) {
+  fs.mkdirSync(videoDir, { recursive: true });
+}
+
+const workFlowImgDir = path.join(__dirname, "uploads", "workFlowImage");
+if (!fs.existsSync(workFlowImgDir)) {
+  fs.mkdirSync(workFlowImgDir, { recursive: true });
+}
+
+const videoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, videoDir);
+  },
+  filename: (req, file, cb) => {
+    // const uniqueName =
+    //   Date.now() + "-" + file.originalname.replace(/\s+/g, "_");
+    // cb(null, uniqueName); 
+    cb(null, `video.${file.originalname.split(".").pop()}`);
+  },
+});
+
+const videoUpload = multer({ storage: videoStorage });
+
+
+const imageStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/workFlowImage/");
+  },
+  filename: function (req, file, cb) {
+    const ext = file.originalname.split(".").pop();
+    cb(null, `image.${ext}`);
+  },
+});
+
+const imageUpload = multer({ storage: imageStorage });
+
 const upload = multer({ storage });
 
 const SECRET = "SUPER_SECRET_KEY";
@@ -858,6 +900,96 @@ app.put("/api/description", authAdmin, (req, res) => {
   `).get(id);
 
   res.json(updated);
+});
+
+
+
+app.post("/api/upload-video", authAdmin, videoUpload.single("video"), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No video uploaded" });
+    }
+
+    const ext = getFileExtension(req.file.originalname);
+    const videoUrl = `/uploads/video/video.${ext}`;
+    // const videoUrl = `/uploads/video/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      url: videoUrl,
+      filename: `video.${ext}‍`,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
+
+app.get("/api/get-video", (req, res) => {
+  try {
+    const videoDir = path.join(__dirname, "uploads/video");
+
+    // خواندن فایل‌های پوشه
+    const files = fs.readdirSync(videoDir);
+
+    // پیدا کردن فایلی که با video شروع می‌شود
+    const videoFile = files.find((f) => f.startsWith("video."));
+
+    if (!videoFile) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    res.json({
+      success: true,
+      url: `/uploads/video/${videoFile}`,
+      filename: videoFile,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to get video" });
+  }
+});
+
+app.post("/api/upload-image", authAdmin, imageUpload.single("image"), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image uploaded" });
+    }
+
+    const ext = req.file.originalname.split(".").pop();
+    const imageUrl = `/uploads/workFlowImage/workFlowImage.${ext}`;
+
+    res.json({
+      success: true,
+      url: imageUrl,
+      filename: `workFlowImage.${ext}`,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
+
+app.get("/api/get-image", (req, res) => {
+  try {
+    const imageDir = path.join(__dirname, "uploads/workFlowImage");
+    const files = fs.readdirSync(imageDir);
+
+    const imageFile = files.find((f) => f.startsWith("image."));
+
+    if (!imageFile) {
+      return res.status(404).json({ error: "Image not found" });
+    }
+
+    res.json({
+      success: true,
+      url: `/uploads/workFlowImage/${imageFile}`,
+      filename: imageFile,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to get image" });
+  }
 });
 
 app.listen(PORT, () => {
